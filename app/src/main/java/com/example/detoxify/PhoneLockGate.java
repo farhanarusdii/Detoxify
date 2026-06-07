@@ -20,7 +20,7 @@ final class PhoneLockGate {
     private static volatile int interactionPauseDepth;
     private static volatile long lastLaunchMs;
     private static volatile long lockScreenLaunchUntilMs;
-    private static final long LAUNCH_DEBOUNCE_MS = 2_500L;
+    private static final long LAUNCH_DEBOUNCE_MS = 800L;  // was 2500 — shorter so Home press re-locks fast
 
     private PhoneLockGate() {
     }

@@ -24,7 +24,7 @@ import java.util.concurrent.Executors;
 public class AppBlockAccessibilityService extends AccessibilityService {
 
     private static final long HOME_DEBOUNCE_MS = 1_200L;
-    private static final long LOCK_PRESENT_DEBOUNCE_MS = 600L;
+    private static final long LOCK_PRESENT_DEBOUNCE_MS = 300L;  // was 600 — faster re-lock after Home
     private static final long LIMIT_POLL_MS = 1_500L;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());

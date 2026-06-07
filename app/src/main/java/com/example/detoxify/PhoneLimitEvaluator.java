@@ -62,6 +62,10 @@ final class PhoneLimitEvaluator {
 
         UsageStatsHelper.TodayBreakdown breakdown = UsageStatsHelper.computeToday(context);
         long used = breakdown.totalMinutes;
+        // Use raw milliseconds for the lock comparison so we don't get a ~30s
+        // rounding gap where the countdown hits zero but the lock never fires.
+        long usedMs = breakdown.totalMs;
+        long effectiveLimitMs = effectiveLimitMinutes(prefs, now) * 60_000L;
 
         long grantExpires = prefs.getLong(BlockMonitorService.PREFS_TIME_GRANT_EXPIRES_MS, 0L);
         boolean grantConfigured = grantExpires > 0L;
@@ -78,13 +82,21 @@ final class PhoneLimitEvaluator {
             return Result.noLock(used, effectiveLimit, 30_000L, grantActive, grantExpires);
         }
 
-        if (used >= effectiveLimit) {
+        // Compare in milliseconds — avoids the ~30s rounding gap where the
+        // countdown shows 0:00 but used (in whole minutes) is still < effectiveLimit.
+        if (usedMs >= effectiveLimitMs) {
             return Result.lock(REASON_DAILY_USAGE, used, effectiveLimit, 8_000L, grantActive, grantExpires);
         }
 
         long nextPoll = 30_000L;
-        if (used >= effectiveLimit - 5 || used * 10 >= effectiveLimit * 9) {
+        long remainingMs = effectiveLimitMs - usedMs;
+        // Poll fast when under 5 min or under 10% remaining
+        if (remainingMs <= 5 * 60_000L || usedMs * 10 >= effectiveLimitMs * 9) {
             nextPoll = 5_000L;
+        }
+        // Poll even faster in the last minute
+        if (remainingMs <= 60_000L) {
+            nextPoll = 1_000L;
         }
         if (grantActive) {
             long untilGrantEnd = grantExpires - now;

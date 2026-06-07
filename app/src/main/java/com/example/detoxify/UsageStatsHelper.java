@@ -105,10 +105,9 @@ public final class UsageStatsHelper {
         int[] hourlyMinutes = computeHourlyMinutesFromEvents(context, usm, start, end);
         long lateNightMinutes = sumLateNightMinutes(hourlyMinutes);
 
-        return new TodayBreakdown(dayKey, totalMinutes, lateNightMinutes, hourlyMinutes, rows);
+        return new TodayBreakdown(dayKey, totalMinutes, totalMs, lateNightMinutes, hourlyMinutes, rows);
     }
 
-    /** Buckets foreground session time into 24 hour slots (local timezone). */
     private static int[] computeHourlyMinutesFromEvents(Context context, UsageStatsManager usm,
                                                         long start, long end) {
         int[] buckets = new int[24];
@@ -164,7 +163,6 @@ public final class UsageStatsHelper {
         }
     }
 
-    /** Hours 22–23 and 0–5 count as late-night screen time. */
     static long sumLateNightMinutes(int[] hourlyMinutes) {
         if (hourlyMinutes == null || hourlyMinutes.length < 24) {
             return 0L;
@@ -193,7 +191,6 @@ public final class UsageStatsHelper {
             return;
         }
 
-        // Firebase keys cannot contain "." — never use package names as map keys.
         List<Map<String, Object>> appsList = new ArrayList<>();
         int n = Math.min(breakdown.apps.size(), MAX_APPS_TO_SYNC);
         for (int i = 0; i < n; i++) {
@@ -215,7 +212,6 @@ public final class UsageStatsHelper {
                 .setValue(payload)
                 .addOnFailureListener(e -> Log.e(TAG, "uploadTodayUsage failed", e));
 
-        // Persist per-day totals so the parent weekly report can sum the last 7 days.
         Map<String, Object> dayRow = new HashMap<>();
         dayRow.put("totalMinutes", breakdown.totalMinutes);
         dayRow.put("lateNightMinutes", breakdown.lateNightMinutes);
@@ -237,7 +233,6 @@ public final class UsageStatsHelper {
                 .addOnFailureListener(e -> Log.e(TAG, "upload dailyUsage failed", e));
     }
 
-    /** Behaviour analysis runs after mood check-in (see {@link MoodCheckInHelper}). */
     public static void refreshInsightsIfMoodReady(Context context, DatabaseReference databaseRoot,
                                                   String childCode) {
         if (childCode == null || childCode.isEmpty()) {
@@ -251,14 +246,17 @@ public final class UsageStatsHelper {
     public static final class TodayBreakdown {
         public final String dayKey;
         public final long totalMinutes;
+        /** Raw milliseconds — used for sub-minute-accurate limit enforcement. */
+        public final long totalMs;
         public final long lateNightMinutes;
         public final int[] hourlyMinutes;
         public final List<AppUsageRow> apps;
 
-        public TodayBreakdown(String dayKey, long totalMinutes, long lateNightMinutes,
+        public TodayBreakdown(String dayKey, long totalMinutes, long totalMs, long lateNightMinutes,
                               int[] hourlyMinutes, List<AppUsageRow> apps) {
             this.dayKey = dayKey;
             this.totalMinutes = totalMinutes;
+            this.totalMs = totalMs;
             this.lateNightMinutes = lateNightMinutes;
             this.hourlyMinutes = hourlyMinutes != null ? hourlyMinutes : new int[24];
             this.apps = apps;
