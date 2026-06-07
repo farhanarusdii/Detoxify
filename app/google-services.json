@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "537005427617",
+    "project_id": "detoxify-a9155",
+    "storage_bucket": "detoxify-a9155.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537005427617:android:771115ebb6c572591019e0",
+        "android_client_info": {
+          "package_name": "com.example.detoxify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0_xhnpuJNc0foxAHMat9w7qjsDfJkn8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

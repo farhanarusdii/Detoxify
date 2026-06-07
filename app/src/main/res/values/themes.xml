@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Detoxify" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Brand -->
+        <item name="colorPrimary">@color/detox_primary</item>
+        <item name="colorOnPrimary">@color/detox_on_primary</item>
+        <item name="colorPrimaryContainer">@color/detox_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/detox_on_primary_container</item>
+
+        <item name="colorSecondary">@color/detox_secondary</item>
+        <item name="colorOnSecondary">@color/detox_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/detox_primary_container</item>
+        <item name="colorOnSecondaryContainer">@color/detox_on_primary_container</item>
+
+        <item name="colorTertiary">@color/detox_tertiary</item>
+        <item name="colorOnTertiary">@color/detox_on_tertiary</item>
+
+        <item name="colorError">@color/detox_error</item>
+        <item name="colorOnError">@color/detox_on_error</item>
+
+        <!-- Surface -->
+        <item name="android:windowBackground">@color/detox_background</item>
+        <item name="colorSurface">@color/detox_surface</item>
+        <item name="colorSurfaceVariant">@color/detox_surface_variant</item>
+        <item name="colorOnSurface">@color/detox_on_surface</item>
+        <item name="colorOutline">@color/detox_outline</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/detox_background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+    </style>
+
+    <!-- Full-screen lock (Family Link–style gate); shown when daily phone limit is reached -->
+    <style name="Theme.Detoxify.LockScreen" parent="Theme.Detoxify">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="p">shortEdges</item>
+    </style>
+
+</resources>

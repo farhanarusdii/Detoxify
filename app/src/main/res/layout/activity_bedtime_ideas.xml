@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/detox_background">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Detoxify.Toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:padding="@dimen/screen_padding">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_bedtime_intro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_16"
+                android:text="@string/bedtime_ideas_intro"
+                android:textColor="@color/detox_on_surface"
+                android:textSize="15sp"
+                android:lineSpacingMultiplier="1.15" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Detoxify.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12">
+
+                <TextView
+                    android:id="@+id/tv_bedtime_section_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_16"
+                    android:text="@string/bedtime_ideas_calm"
+                    android:textColor="@color/detox_on_surface"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.2" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Detoxify.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12">
+
+                <TextView
+                    android:id="@+id/tv_bedtime_section_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_16"
+                    android:text="@string/bedtime_ideas_creative"
+                    android:textColor="@color/detox_on_surface"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.2" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Detoxify.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12">
+
+                <TextView
+                    android:id="@+id/tv_bedtime_section_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_16"
+                    android:text="@string/bedtime_ideas_connection"
+                    android:textColor="@color/detox_on_surface"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.2" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Detoxify.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tv_bedtime_section_4"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/space_16"
+                    android:text="@string/bedtime_ideas_tips"
+                    android:textColor="@color/detox_on_surface"
+                    android:textSize="14sp"
+                    android:lineSpacingMultiplier="1.2" />
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

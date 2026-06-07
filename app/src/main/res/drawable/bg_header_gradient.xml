@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="0"
+        android:startColor="@color/detox_gradient_start"
+        android:centerColor="@color/detox_gradient_center"
+        android:endColor="@color/detox_gradient_end" />
+    <corners android:radius="28dp" />
+</shape>

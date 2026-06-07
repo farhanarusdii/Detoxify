@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Night: same family, deeper surfaces -->
+
+    <color name="detox_primary">#CAD19F</color>
+    <color name="detox_on_primary">#535231</color>
+    <color name="detox_primary_container">#737759</color>
+    <color name="detox_on_primary_container">#FAF8F1</color>
+
+    <color name="detox_secondary">#D8968F</color>
+    <color name="detox_on_secondary">#FAF8F1</color>
+
+    <color name="detox_tertiary">#D6AD9B</color>
+    <color name="detox_on_tertiary">#535231</color>
+
+    <color name="detox_error">#C4756E</color>
+    <color name="detox_on_error">#FAF8F1</color>
+
+    <color name="detox_background">#535231</color>
+    <color name="detox_surface">#62644F</color>
+    <color name="detox_surface_variant">#737759</color>
+    <color name="detox_on_surface">#FAF8F1</color>
+    <color name="detox_outline">#919869</color>
+
+    <color name="detox_text_secondary">#CAD19F</color>
+
+    <color name="detox_on_header">#FAF8F1</color>
+    <color name="detox_on_header_muted">#EDDFCC</color>
+
+    <color name="detox_gradient_start">#535231</color>
+    <color name="detox_gradient_center">#726759</color>
+    <color name="detox_gradient_end">#919869</color>
+</resources>

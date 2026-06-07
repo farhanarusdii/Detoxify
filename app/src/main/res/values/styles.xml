@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Detoxify.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="titleTextColor">?attr/colorOnSurface</item>
+        <item name="subtitleTextColor">@color/detox_text_secondary</item>
+        <item name="navigationIconTint">?attr/colorOnSurface</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="Detoxify.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">22dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/detox_outline</item>
+        <item name="cardBackgroundColor">@color/detox_surface</item>
+    </style>
+
+    <style name="Detoxify.FeatureCard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">24dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/detox_primary_container</item>
+    </style>
+
+    <style name="Detoxify.SectionTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Detoxify.HelperText" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/detox_text_secondary</item>
+    </style>
+
+</resources>

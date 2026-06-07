@@ -1,0 +1,291 @@
+<resources>
+    <string name="app_name">Detoxify</string>
+    <string name="accessibility_service_summary">Block apps and pause the phone when the daily limit is reached</string>
+    <string name="accessibility_service_description">Detoxify watches which app opens so blocked apps can be closed immediately, and so the phone can be gated when the daily screen-time limit is reached. Only used for parental controls you set up in the app.</string>
+
+    <string name="phone_lock_title">Time\'s up for today</string>
+    <string name="phone_lock_message">This phone has reached its daily screen-time limit. Phone use stays paused until tomorrow or until your parent approves more time or unlocks with their password.</string>
+    <string name="phone_lock_parent_unlock">Parent unlock</string>
+    <string name="phone_lock_footer">Emergency calling may still be available from your phone app.</string>
+
+    <string name="phone_lock_parent_dialog_title">Parent unlock</string>
+    <string name="phone_lock_parent_dialog_message">Enter the parent password. You will be asked to set a new daily screen-time limit before the phone unlocks.</string>
+    <string name="phone_lock_parent_hint">Parent password</string>
+    <string name="phone_lock_parent_success">New limit saved. Phone unlocked.</string>
+    <string name="phone_lock_set_limit_title">Set new daily limit</string>
+    <string name="phone_lock_set_limit_message">%1$s has used %2$s today. Set a new daily limit higher than that to unlock the phone.</string>
+    <string name="phone_lock_set_limit_too_low">Limit must be higher than time already used today (at least %1$s).</string>
+    <string name="phone_lock_parent_failed">Incorrect password.</string>
+
+    <string name="toast_saved_phone_limit">Saved phone limit (%1$s) — child device updates automatically</string>
+    <string name="toast_phone_limit_local">Phone daily limit set to %1$s</string>
+
+    <string name="block_apps_loading">Loading synced apps…</string>
+    <string name="block_apps_empty_child">No apps synced yet. Open Detoxify on the child’s phone (stay online for a moment), then open this screen again.</string>
+    <string name="block_apps_nothing_to_save">No app list from the child device yet — sync apps first.</string>
+    <string name="block_apps_saved">Saved for child device (%1$d apps)</string>
+
+    <string name="bedtime_ideas_title">Instead of screens</string>
+    <string name="bedtime_ideas_intro">Swap the phone for a few minutes of real connection. Pick one small ritual — the goal is calm, not perfect.</string>
+    <string name="bedtime_ideas_calm">Calm wind-down\n\n• Read aloud together (even 10 minutes counts)\n• Listen to soft music or a bedtime playlist\n• Dim lights and do slow stretching or “sleepy yoga”\n• Guided breathing: in for 4, hold 2, out for 6\n• Pack tomorrow’s bag or lay out clothes together</string>
+    <string name="bedtime_ideas_creative">Low-stimulation play\n\n• Draw or color side by side\n• Tell a story one sentence at a time, taking turns\n• Simple card or board games\n• Look at family photos and share memories\n• Stargaze from a window or talk about the day’s “rose &amp; thorn”</string>
+    <string name="bedtime_ideas_connection">Connection without a screen\n\n• Snuggle and ask “What was the kindest thing you saw today?”\n• Rub backs or trace letters on their hand to guess\n• Hum a lullaby or sing softly\n• Whisper a short gratitude list — three tiny good things\n• Plan a weekend adventure on paper</string>
+    <string name="bedtime_ideas_tips">Make it easier\n\n• Charge phones outside the bedroom so the habit is shared\n• Model putting your own device away first\n• Offer two choices (“Book or bath first?”) so they still feel in control\n• If they push back, stay kind and brief — consistency beats length</string>
+
+    <string name="bedtime_ideas_title_child">Ideas instead of scrolling</string>
+    <string name="bedtime_ideas_child_intro">Your brain likes a calm ending to the day. Try one tiny thing with a grown-up — no phone needed.</string>
+    <string name="bedtime_ideas_child_calm">Wind down\n\n• Listen to a story someone reads to you\n• Hum a quiet song together\n• Do “lazy lion” stretches: reach up high, then hang loose\n• Count slow breaths to ten\n• Pick tomorrow’s clothes like a game</string>
+    <string name="bedtime_ideas_child_creative">Play without a screen\n\n• Draw a silly creature and have a grown-up add to it\n• Build a fort from pillows and a blanket\n• Play “I spy” in your room\n• Make shadow puppets with a flashlight\n• Tell a made-up story one word at a time</string>
+    <string name="bedtime_ideas_child_connection">Together time\n\n• Ask a grown-up about their favorite day when they were your age\n• Share your “best moment” and “tricky moment” from today\n• Learn a short handshake only you two know\n• Whisper three things you’re glad happened today\n• Plan a tiny adventure for the weekend</string>
+    <string name="bedtime_ideas_child_tips">Remember\n\n• Phones can sleep in another room — yours too\n• It’s okay if you don’t feel like it at first; short tries count\n• You can always come back to the list tomorrow</string>
+
+    <string name="child_bedtime_card_hint">Tap the card for ideas you can do with a grown-up instead of scrolling</string>
+    <string name="child_parent_unlock_active">Unlocked by parent</string>
+
+    <string name="notif_channel_watch_name">Parent watch</string>
+    <string name="notif_channel_watch_desc">Keeps Detoxify listening for time requests from your child’s device.</string>
+    <string name="notif_channel_alerts_name">Time requests</string>
+    <string name="notif_channel_alerts_desc">Alerts when your child asks for more screen time.</string>
+    <string name="notif_watch_title">Detoxify</string>
+    <string name="notif_watch_text">Listening for screen-time requests from your children.</string>
+    <string name="notif_time_request_title">Screen-time request</string>
+    <string name="notif_time_request_body">%1$s asked for %2$s more today. Open Detoxify to review.</string>
+    <string name="notif_child_default_name">Your child</string>
+
+    <string name="time_request_need_connection">Connect this device with your parent code before sending a request.</string>
+    <string name="time_request_sent_toast">Request sent for %1$s</string>
+    <string name="time_request_sent_title">Request sent</string>
+    <string name="time_request_sent_message">Your parent will get a notification on their phone (if they allow alerts for Detoxify). Please wait for them to respond.</string>
+    <string name="time_request_failed">Could not send request: %1$s</string>
+    <string name="reports_title">Reports</string>
+    <string name="reports_subtitle">Rolling last 7 days on this phone’s calendar. Totals sync when the child device opens Detoxify with usage access.</string>
+    <string name="reports_subtitle_usage">Weekly and monthly screen time for the selected child. Totals sync when the child device opens Detoxify with usage access.</string>
+    <string name="reports_subtitle_insights">Behaviour patterns and mood vs screen time for the selected child.</string>
+    <string name="insights_page_title">Behaviour insights</string>
+    <string name="reports_weekly_heading">Total screen time</string>
+    <string name="reports_weekly_caption">Sum of the last 7 days</string>
+    <string name="reports_daily_avg_heading">Daily average</string>
+    <string name="reports_daily_avg_caption">Total divided by 7 (includes quiet days as zero)</string>
+    <string name="reports_missing_child_code">Open reports from the parent dashboard after selecting a child.</string>
+    <string name="reports_empty_history">No daily history yet. After your child uses their phone today, open Detoxify there once — we store each day’s total for this chart.</string>
+    <string name="reports_footnote_pattern">Days in this window with any recorded time: %1$d of 7.</string>
+    <string name="reports_load_error">Could not load data: %1$s</string>
+
+    <string name="phone_lock_remote_title">Phone locked by parent</string>
+    <string name="phone_lock_remote_message">Your parent has paused this phone. You can’t use apps until they unlock it or you send a request and they approve more time for today.</string>
+    <string name="phone_lock_request_access">Request access from parent</string>
+
+    <string name="notif_action_approve">Review &amp; approve</string>
+
+    <string name="parent_card_device_lock_title">Lock whole phone</string>
+    <string name="parent_device_locked_status">Status: locked — child can only use emergency/dialer and Detoxify</string>
+    <string name="parent_device_unlocked_status">Status: unlocked — normal daily limit applies</string>
+    <string name="parent_device_lock_dialog_title">Lock this child’s phone?</string>
+    <string name="parent_device_lock_dialog_message">The child device will be blocked from all apps (like Google Family Link pause). They can send you a time request from the lock screen.</string>
+    <string name="parent_device_lock_confirm">Lock now</string>
+    <string name="parent_device_unlock_dialog_title">Unlock this child’s phone?</string>
+    <string name="parent_device_unlock_dialog_message">You will set a new daily screen-time limit. The phone unlocks after you save it.</string>
+    <string name="parent_device_unlock_confirm">Unlock</string>
+
+    <string name="parent_card_review_requests">Review requests</string>
+    <string name="parent_card_reports">Monthly reports</string>
+    <string name="parent_card_compare">Compare children</string>
+    <string name="parent_my_children">My children</string>
+    <string name="parent_no_children_hint">No children yet. Tap Add child to create a profile and share the code with their phone.</string>
+
+    <string name="parent_picker_toolbar">Your children</string>
+    <string name="parent_picker_title">Who are you managing?</string>
+    <string name="parent_picker_subtitle">Select a child profile, then connect their device before the dashboard.</string>
+    <string name="parent_picker_empty">No child profiles yet. Tap Add new child to create one and get a code for their phone.</string>
+    <string name="parent_picker_add_child">Add new child</string>
+    <string name="parent_picker_continue">Continue to dashboard</string>
+    <string name="parent_picker_continue_empty">Skip — open dashboard</string>
+    <string name="parent_picker_open_dashboard">Open dashboard</string>
+    <string name="parent_picker_stay_here">Add another</string>
+    <string name="parent_picker_not_logged_in">Please log in as a parent first.</string>
+    <string name="parent_picker_load_error">Could not load children: %1$s</string>
+
+    <string name="add_child_button">Add child</string>
+    <string name="add_child_title">Add a child</string>
+    <string name="add_child_message">Enter a name for this child. We will generate a code for them to enter on their device.</string>
+    <string name="add_child_name_hint">Child\'s name</string>
+    <string name="add_child_default_name">My child</string>
+    <string name="add_child_not_logged_in">You must be logged in as a parent.</string>
+    <string name="add_child_failed">Could not add child: %1$s</string>
+    <string name="add_child_code_title">Child code ready</string>
+    <string name="add_child_code_message">%1$s is set up.\n\nShare this code with their phone (Child mode → Connect):\n\n%2$s</string>
+    <string name="add_child_set_limit_button">Set daily limit</string>
+
+    <string name="compare_children_button">Compare monthly screen time</string>
+    <string name="compare_title">Compare children</string>
+    <string name="compare_subtitle">Total screen time this calendar month, highest first.</string>
+    <string name="compare_subtitle_graph">Each bar shows how much screen time that child had this month. Longer bar = more time.</string>
+    <string name="compare_chart_legend">Each bar is total screen time this month. Top apps for each child are listed below.</string>
+    <string name="compare_monthly_top_section">Top apps by child</string>
+    <string name="compare_monthly_top_subtitle">Same top-5 list as each child\'s monthly report — ranked by time this month.</string>
+    <string name="reports_monthly_top_heading">Top 5 apps this month</string>
+    <string name="reports_monthly_top_empty">No app breakdown yet. Open Detoxify on the child\'s phone with usage access — we save app names each day they sync.</string>
+    <string name="reports_monthly_total_label">Total this month: %1$s</string>
+    <string name="compare_month_heading">Month: %1$s</string>
+    <string name="compare_empty">Add at least one child to compare monthly screen time.</string>
+    <string name="compare_not_logged_in">Log in as a parent to compare children.</string>
+
+    <string name="reports_subtitle_full">Weekly and monthly screen time, behaviour patterns, and mood correlation for the selected child.</string>
+    <string name="reports_weekly_section">Weekly report (last 7 days)</string>
+    <string name="reports_monthly_section">Monthly report</string>
+    <string name="reports_monthly_empty">No screen time recorded this month yet.</string>
+    <string name="reports_monthly_footnote">%1$d of %2$d days this month have recorded usage.</string>
+    <string name="parent_review_requests_title">Child requests</string>
+    <string name="parent_review_requests_subtitle">Tap a row to approve or deny. Pending requests from all your children appear here.</string>
+    <string name="parent_review_requests_empty">No pending requests right now.</string>
+    <string name="parent_review_requests_not_logged_in">You need to be logged in as a parent to see requests.</string>
+    <string name="parent_review_requests_load_error">Could not load requests: %1$s</string>
+    <string name="parent_review_line_pattern">%1$s — asking for %2$s more today (tap to review)</string>
+
+    <string name="time_request_dialog_title">Request more time</string>
+    <string name="time_request_hint_hours">Hours</string>
+    <string name="time_request_hint_minutes">Minutes</string>
+    <string name="time_request_send">Send request</string>
+    <string name="time_request_invalid_minutes">Minutes must be between 0 and 59.</string>
+    <string name="time_request_need_amount">Enter how much extra time you need.</string>
+    <string name="time_request_invalid_numbers">Enter valid numbers for hours and minutes.</string>
+
+    <string name="approve_time_request_title">Review request</string>
+    <string name="approve_new_daily_limit_label">If you approve, today’s allowed time becomes (you can edit)</string>
+    <string name="approve_grant_unlock">Approve &amp; unlock</string>
+    <string name="approve_deny">Deny request</string>
+    <string name="approve_missing_args">Missing child or request.</string>
+    <string name="approve_child_missing">Could not find this child in your account.</string>
+    <string name="approve_request_stale">This request was already handled or replaced. Open the dashboard for the latest state.</string>
+    <string name="approve_summary_pattern">%1$s is asking for about %2$s more screen time today.</string>
+    <string name="approve_suggested_pattern">Suggested allowance: %1$s (at least today’s use %3$s plus what they asked for, and not below the previous cap %2$s). Adjust the numbers if you want something different.</string>
+    <string name="approve_success">Saved. The child phone will update when online.</string>
+    <string name="approve_failed">Could not save: %1$s</string>
+    <string name="approve_denied_toast">Request marked as denied.</string>
+    <string name="approve_load_failed">Could not load: %1$s</string>
+    <string name="approve_limit_positive">Enter a total allowance greater than zero minutes.</string>
+
+    <string name="parent_card_insights">Behaviour insights</string>
+
+    <string name="set_time_limit_card_title">Daily screen-time limit</string>
+    <string name="set_time_limit_card_hint">Tap to set how long this child may use their phone each day</string>
+    <string name="set_time_limit_card_status">Current limit: %1$s per day</string>
+    <string name="set_time_limit_title">Set daily limit</string>
+    <string name="set_time_limit_message">Set how much screen time %1$s is allowed today. The child phone updates automatically when online.</string>
+    <string name="set_time_limit_button">Save limit</string>
+    <string name="set_time_limit_positive">Enter a limit greater than zero minutes.</string>
+    <string name="set_time_limit_success">Saved daily limit for %1$s.</string>
+    <string name="set_time_limit_failed">Could not save limit: %1$s</string>
+
+    <string name="flow_section_dashboard_analytics">Dashboard analytics</string>
+    <string name="flow_section_reports_insights">Monthly reports, comparison &amp; insights</string>
+    <string name="flow_section_screen_time_limits">Screen-time limits &amp; requests</string>
+    <string name="flow_section_bedtime_ideas">Bedtime suggestions &amp; offline ideas</string>
+    <string name="flow_section_dashboard_report">View dashboard report</string>
+    <string name="flow_bedtime_offline_card">Bedtime suggestions and offline activity ideas</string>
+
+    <string name="flow_child_permissions_toolbar">Device permissions</string>
+    <string name="flow_child_permissions_title">Allow device permissions</string>
+    <string name="flow_child_permissions_subtitle">Detoxify needs these on the child phone before monitoring screen time and storing usage in Firebase.</string>
+    <string name="flow_step_usage_access">Usage access (required)</string>
+    <string name="flow_step_accessibility">Accessibility for app blocking (recommended)</string>
+    <string name="flow_open_usage_settings">Open usage access settings</string>
+    <string name="flow_open_accessibility_settings">Open accessibility settings</string>
+    <string name="flow_permission_granted">Granted</string>
+    <string name="flow_permission_needed">Not granted yet</string>
+    <string name="flow_permission_recommended">Optional — improves blocking and limits</string>
+    <string name="flow_usage_required">Usage access is required to continue.</string>
+    <string name="flow_continue_to_dashboard">Continue to monitoring</string>
+
+    <string name="flow_connect_child_toolbar">Connect child device</string>
+    <string name="flow_connect_child_title">Connect child device</string>
+    <string name="flow_connect_child_subtitle">On the child\'s phone: open Detoxify → Child mode → enter this code and their name.</string>
+    <string name="flow_connect_status_waiting">Waiting for child device to connect…</string>
+    <string name="flow_connect_status_online">Child device connected</string>
+    <string name="flow_connect_status_error">Could not check status: %1$s</string>
+    <string name="flow_open_parent_dashboard">Open main dashboard</string>
+    <string name="insights_title">AI Insights</string>
+    <string name="insights_subtitle">Behaviour patterns and mood vs screen time (updates when the child device syncs).</string>
+    <string name="insights_missing_child">Select a child on the dashboard first.</string>
+    <string name="insights_loading">Loading insights…</string>
+    <string name="insights_behavior_heading">🧠 Behaviour insight</string>
+    <string name="insights_mood_heading">😊 Mood correlation</string>
+    <string name="insights_risk_label">Risk level</string>
+    <string name="insights_risk_low">Low</string>
+    <string name="insights_risk_medium">Medium</string>
+    <string name="insights_risk_high">High</string>
+    <string name="insights_overuse_yes">Overuse detected today</string>
+    <string name="insights_overuse_no">No overuse flag today</string>
+    <string name="insights_late_night_pattern">Late-night use today: %1$s</string>
+    <string name="insights_late_night_none">Little or no late-night use today</string>
+    <string name="insights_patterns_heading">Habit patterns</string>
+    <string name="insights_no_patterns">No strong patterns detected in the last two weeks.</string>
+    <string name="insights_empty_behavior">No behaviour insights yet. Open Detoxify on the child phone with usage access enabled.</string>
+    <string name="insights_empty_mood">No mood check-ins yet. Ask your child to log how they feel today.</string>
+
+    <string name="insight_overuse_limit">Today %1$s — at or above the daily allowance (%2$s).</string>
+    <string name="insight_overuse_avg">Today %1$s — about 25%% above the recent daily average (%2$s).</string>
+    <string name="insight_pattern_weekend">Weekend screen time is noticeably higher than weekdays.</string>
+    <string name="insight_pattern_rising">Screen time has been rising over the last few days.</string>
+    <string name="insight_pattern_late_habit">Late-night use happened on several nights this week.</string>
+    <string name="insight_summary_high">Several signals suggest higher-than-usual risk — review limits and bedtime.</string>
+    <string name="insight_summary_overuse_late">Heavy use today plus significant late-night screen time.</string>
+    <string name="insight_summary_overuse">Today’s screen time is higher than usual.</string>
+    <string name="insight_summary_late">Notable late-night screen use today.</string>
+    <string name="insight_summary_patterns">We noticed repeating habits in the last two weeks.</string>
+    <string name="insight_summary_ok">Usage looks within typical patterns for now.</string>
+
+    <string name="child_connected_to">Connected to: %1$s</string>
+    <string name="child_connected_loading">Connected to parent…</string>
+    <string name="child_connected_unknown">Connected to parent</string>
+    <string name="mood_dialog_title">How are you feeling?</string>
+    <string name="mood_prompt_message">Take a moment to log how you feel today. Your parent can see this alongside screen-time patterns.</string>
+    <string name="mood_prompt_later">Later</string>
+    <string name="mood_card_title">Mood check-in</string>
+    <string name="mood_card_prompt">Tap to log how you feel today (once per day)</string>
+    <string name="mood_card_done">Thanks — you checked in today ✓</string>
+    <string name="mood_need_connection">Connect this device with your parent code before logging mood.</string>
+    <string name="mood_already_today">You already checked in today.</string>
+    <string name="mood_saved_toast">Mood saved: %1$s</string>
+    <string name="mood_save_failed">Could not save mood: %1$s</string>
+    <string name="mood_insight_need_more">Not enough mood logs yet. After a few check-ins we can compare mood and screen time.</string>
+    <string name="mood_insight_higher_on_low">On lower-mood days, average screen time was %1$s vs %2$s on brighter days (about %3$d%% higher).</string>
+    <string name="mood_insight_balanced">Lower-mood days averaged %1$s; higher-mood days averaged %2$s — fairly similar.</string>
+    <string name="mood_insight_partial">Keep logging mood — we need paired days with screen time to compare.</string>
+    <string name="mood_recent_heading">Recent check-ins</string>
+    <string name="mood_recent_line">%1$s — %2$s · screen %3$s</string>
+
+    <string name="logout_title">Log out</string>
+    <string name="manage_account_title">Manage user</string>
+    <string name="manage_account_email_label">Signed in as</string>
+    <string name="manage_account_email_unknown">Unknown email</string>
+    <string name="manage_account_not_logged_in">Please log in again.</string>
+    <string name="manage_account_change_password">Change password</string>
+    <string name="manage_account_current_password">Current password</string>
+    <string name="manage_account_new_password">New password</string>
+    <string name="manage_account_confirm_password">Confirm new password</string>
+    <string name="manage_account_save">Save</string>
+    <string name="manage_account_fill_all">Fill in all password fields.</string>
+    <string name="manage_account_password_short">New password must be at least 6 characters.</string>
+    <string name="manage_account_password_mismatch">New passwords do not match.</string>
+    <string name="manage_account_password_updated">Password updated.</string>
+    <string name="manage_account_password_failed">Could not update password: %1$s</string>
+    <string name="manage_account_reauth_failed">Current password incorrect: %1$s</string>
+    <string name="manage_account_parent_pin">Parent PIN (child mode)</string>
+    <string name="manage_account_parent_pin_message">Your child needs this PIN to switch to parent mode on their phone.</string>
+    <string name="manage_account_parent_pin_hint">PIN (min 4 characters)</string>
+    <string name="manage_account_pin_short">PIN must be at least 4 characters.</string>
+    <string name="manage_account_pin_saved">Parent PIN saved on this device.</string>
+
+    <string name="child_options_menu_desc">Child options</string>
+    <string name="delete_child_button">Delete selected child</string>
+    <string name="delete_child_confirm">Delete</string>
+    <string name="delete_child_failed">Could not delete: %1$s</string>
+    <string name="delete_child_message">Remove %1$s (code %2$s)? Their device will stop syncing until you add a new profile. This cannot be undone.</string>
+    <string name="delete_child_select_first">Select a child from the list first.</string>
+    <string name="delete_child_success">Child profile deleted.</string>
+    <string name="delete_child_title">Delete child profile?</string>
+
+    <string name="time_request_denied_title">Request not approved</string>
+    <string name="time_request_denied_message">Your parent did not approve more screen time right now. You can try again later or ask them in person.</string>
+</resources>

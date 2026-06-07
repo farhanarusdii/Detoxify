@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cottagecore palette (gradients.app): #FAF8F1 #EDDFCC #D8968F #D6AD9B #CAD19F #A2AC80 #919869 #535231 #737759 #726759 -->
+
+    <color name="detox_cream">#FAF8F1</color>
+    <color name="detox_warm_beige">#EDDFCC</color>
+    <color name="detox_rose">#D8968F</color>
+    <color name="detox_peach">#D6AD9B</color>
+    <color name="detox_sage_light">#CAD19F</color>
+    <color name="detox_sage_mid">#A2AC80</color>
+    <color name="detox_olive">#919869</color>
+    <color name="detox_forest">#535231</color>
+    <color name="detox_olive_gray">#737759</color>
+    <color name="detox_taupe">#726759</color>
+
+    <!-- Material roles -->
+    <color name="detox_primary">#919869</color>
+    <color name="detox_on_primary">#FAF8F1</color>
+    <color name="detox_primary_container">#CAD19F</color>
+    <color name="detox_on_primary_container">#535231</color>
+
+    <color name="detox_secondary">#D8968F</color>
+    <color name="detox_on_secondary">#FAF8F1</color>
+
+    <color name="detox_tertiary">#D6AD9B</color>
+    <color name="detox_on_tertiary">#535231</color>
+
+    <color name="detox_error">#A85A5A</color>
+    <color name="detox_on_error">#FAF8F1</color>
+
+    <color name="detox_background">#FAF8F1</color>
+    <color name="detox_surface">#EDDFCC</color>
+    <color name="detox_surface_variant">#D6AD9B</color>
+    <color name="detox_on_surface">#535231</color>
+    <color name="detox_outline">#A2AC80</color>
+
+    <color name="detox_text_secondary">#726759</color>
+
+    <!-- Text on gradient / strong brand headers -->
+    <color name="detox_on_header">#FAF8F1</color>
+    <color name="detox_on_header_muted">#EDDFCC</color>
+
+    <color name="detox_gradient_start">#919869</color>
+    <color name="detox_gradient_center">#D8968F</color>
+    <color name="detox_gradient_end">#D6AD9B</color>
+</resources>
