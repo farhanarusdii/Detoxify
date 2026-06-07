@@ -98,6 +98,9 @@ public class BlockMonitorService extends Service {
         }
     };
 
+    // FIX 1: limitPoll no longer double-posts via mainHandler.post(() -> mainHandler.postDelayed(...)).
+    // The next poll is now scheduled directly with postDelayed inside the executor finally-block,
+    // which means the 1-second interval in the last minute actually fires on time.
     private final Runnable limitPoll = new Runnable() {
         @Override
         public void run() {
@@ -105,9 +108,10 @@ public class BlockMonitorService extends Service {
                 long nextMs = 30_000L;
                 try {
                     nextMs = tickDailyLimit();
+                } catch (Exception ignored) {
                 } finally {
                     long delay = nextMs;
-                    mainHandler.post(() -> mainHandler.postDelayed(limitPoll, delay));
+                    mainHandler.postDelayed(limitPoll, delay);
                 }
             });
         }
@@ -432,12 +436,6 @@ public class BlockMonitorService extends Service {
         goHome();
     }
 
-    /**
-     * Updates usage vs daily phone limit. Shows {@link PhoneLockedActivity} and sets
-     * {@link #PREFS_PHONE_LIMIT_EXCEEDED} when the limit is reached (child device only).
-     *
-     * @return delay before the next poll (faster while locked so parent remote updates apply quickly)
-     */
     private long tickDailyLimit() {
         String childCode = prefs.getString("connectedChildCode", "");
         if (childCode.isEmpty()) {
@@ -468,14 +466,16 @@ public class BlockMonitorService extends Service {
         return result.nextPollMs;
     }
 
+    // FIX 1 (continued): Always call requestLockPresentation — not just when the lock screen
+    // isn't already resumed. The child may have swiped it away or it may have been recreated,
+    // so we always re-present it when the limit is exceeded.
     private void applyLockResult(PhoneLimitEvaluator.Result result) {
         prefs.edit().putBoolean(PREFS_PHONE_LIMIT_EXCEEDED, true).commit();
         mainHandler.post(() -> {
             startForegroundWithNotification(true);
-            if (!PhoneLockGate.isLockScreenResumed()) {
-                PhoneLockGate.requestLockPresentation(BlockMonitorService.this,
-                        PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT);
-            }
+            // Always request — lock screen may have been dismissed by swiping
+            PhoneLockGate.requestLockPresentation(BlockMonitorService.this,
+                    PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT);
         });
     }
 

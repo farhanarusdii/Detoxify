@@ -61,7 +61,7 @@ final class PhoneLockGate {
      * (keyboard, dialogs, typing on {@link PhoneLockedActivity}).
      */
     static boolean shouldDeferPhoneLockEnforcement() {
-        return lockScreenResumed || interactionPauseDepth > 0;
+        return interactionPauseDepth > 0;
     }
 
     static boolean isPhoneGated(Context context) {

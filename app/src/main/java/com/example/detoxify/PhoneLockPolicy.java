@@ -36,9 +36,6 @@ final class PhoneLockPolicy {
                 || p.contains("teleservice");
     }
 
-    /**
-     * Home/launcher packages: sending HOME lands here — do not HOME-loop; show the lock screen instead.
-     */
     /** Soft keyboard / IME — must not trigger HOME while the child types on the lock screen. */
     static boolean isInputMethodPackage(String pkg) {
         if (pkg == null || pkg.isEmpty()) {
@@ -54,6 +51,12 @@ final class PhoneLockPolicy {
                 || p.contains("touchtype");
     }
 
+    /**
+     * Home/launcher and recents/task-switcher packages: when the child presses Home or
+     * opens recents while locked, show the lock screen instead of staying on the launcher.
+     * FIX 3: Added recents, taskview, overview to catch the task-switcher overlay,
+     * which lets children switch to another app without a WINDOW_STATE_CHANGED event.
+     */
     static boolean isLauncherPackage(String pkg) {
         if (pkg == null || pkg.isEmpty()) {
             return false;
@@ -70,6 +73,9 @@ final class PhoneLockPolicy {
                 || p.contains("oppo.launcher")
                 || p.contains("sec.android.app.launcher")
                 || p.contains("oneplus.launcher")
-                || p.contains("nothing.launcher");
+                || p.contains("nothing.launcher")
+                || p.contains("recents")       // recents / task-switcher overlay
+                || p.contains("taskview")      // some OEM task view implementations
+                || p.contains("overview");     // Pixel overview / recents
     }
 }

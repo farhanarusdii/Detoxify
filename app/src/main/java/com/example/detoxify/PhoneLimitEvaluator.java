@@ -62,6 +62,12 @@ final class PhoneLimitEvaluator {
 
         UsageStatsHelper.TodayBreakdown breakdown = UsageStatsHelper.computeToday(context);
         long used = breakdown.totalMinutes;
+        android.util.Log.d(
+                "LIMIT_DEBUG",
+                "usedMs=" + breakdown.totalMs
+                        + " usedMinutes=" + breakdown.totalMinutes
+                        + " limitMs=" + effectiveLimitMinutes(prefs, now) * 60000L
+        );
         // Use raw milliseconds for the lock comparison so we don't get a ~30s
         // rounding gap where the countdown hits zero but the lock never fires.
         long usedMs = breakdown.totalMs;

@@ -20,6 +20,7 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.firebase.database.Query;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -77,6 +78,11 @@ public class ParentDashboardActivity extends AppCompatActivity {
     private boolean deviceRemoteLocked;
 
     private String pendingOpenChildCode;
+
+    // FIX 2: Persistent listener for children so the dashboard updates live when
+    // the parent changes a limit — instead of only reading once at launch.
+    private Query childrenRef;
+    private ValueEventListener childrenListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -147,6 +153,10 @@ public class ParentDashboardActivity extends AppCompatActivity {
     protected void onDestroy() {
         detachUsageListener();
         detachDeviceLockListener();
+        // FIX 2: Clean up the persistent children listener to avoid leaks
+        if (childrenRef != null && childrenListener != null) {
+            childrenRef.removeEventListener(childrenListener);
+        }
         super.onDestroy();
     }
 
@@ -183,8 +193,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
                     if (minutes == null) {
                         minutes = 0L;
                     }
-                    // New format: list items under apps/0, apps/1 with packageName field.
-                    // Legacy (broken) format used package name as key — ignore invalid keys.
                     String name = label != null && !label.isEmpty()
                             ? label
                             : (packageName != null && !packageName.isEmpty() ? packageName : app.getKey());
@@ -328,59 +336,71 @@ public class ParentDashboardActivity extends AppCompatActivity {
         builder.show();
     }
 
+    // FIX 2: Use a persistent ValueEventListener so the dashboard automatically
+    // reflects limit changes pushed from Firebase without requiring a restart.
     private void loadChildrenFromFirebase() {
         if (parentId.isEmpty()) {
             Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Toast.makeText(this, "Loading children...", Toast.LENGTH_SHORT).show();
+        // Remove any previous listener before attaching a new one
+        if (childrenRef != null && childrenListener != null) {
+            childrenRef.removeEventListener(childrenListener);
+        }
 
-        mDatabase.child("children").orderByChild("parentId").equalTo(parentId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        childrenList.clear();
-                        childrenMap.clear();
+        childrenRef = mDatabase.child("children").orderByChild("parentId").equalTo(parentId);
+        childrenListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                childrenList.clear();
+                childrenMap.clear();
 
-                        for (DataSnapshot childSnapshot : dataSnapshot.getChildren()) {
-                            String childCode = childSnapshot.getKey();
-                            String childName = childSnapshot.child("childName").getValue(String.class);
-                            String deviceName = childSnapshot.child("deviceName").getValue(String.class);
-                            Boolean connected = childSnapshot.child("connected").getValue(Boolean.class);
-                            Long dailyLimit = childSnapshot.child("dailyLimit").getValue(Long.class);
+                for (DataSnapshot childSnapshot : dataSnapshot.getChildren()) {
+                    String childCode = childSnapshot.getKey();
+                    String childName = childSnapshot.child("childName").getValue(String.class);
+                    String deviceName = childSnapshot.child("deviceName").getValue(String.class);
+                    Boolean connected = childSnapshot.child("connected").getValue(Boolean.class);
+                    Long dailyLimit = childSnapshot.child("dailyLimit").getValue(Long.class);
 
-                            if (childName == null) childName = "Unknown Child";
+                    if (childName == null) childName = "Unknown Child";
 
-                            ChildInfo child = new ChildInfo();
-                            child.childCode = childCode;
-                            child.childName = childName;
-                            child.deviceName = deviceName != null ? deviceName : "Not connected";
-                            child.isConnected = connected != null ? connected : false;
-                            child.dailyLimit = dailyLimit != null ? dailyLimit : 120;
+                    ChildInfo child = new ChildInfo();
+                    child.childCode = childCode;
+                    child.childName = childName;
+                    child.deviceName = deviceName != null ? deviceName : "Not connected";
+                    child.isConnected = connected != null ? connected : false;
+                    child.dailyLimit = dailyLimit != null ? dailyLimit : 120;
 
-                            childrenList.add(child);
-                            childrenMap.put(childCode, child);
+                    childrenList.add(child);
+                    childrenMap.put(childCode, child);
+                    Log.d("ParentDashboard", "Loaded child: " + childName + " (" + childCode + ")");
+                }
 
-                            // Log for debugging
-                            Log.d("ParentDashboard", "Loaded child: " + childName + " (" + childCode + ")");
-                        }
+                updateChildrenSpinner();
 
-                        updateChildrenSpinner();
+                // FIX 2: Refresh the displayed limit for the currently selected child
+                // every time Firebase delivers an update (e.g. after parent saves new limit)
+                if (currentChildCode != null && !currentChildCode.isEmpty()) {
+                    ChildInfo ci = childrenMap.get(currentChildCode);
+                    if (ci != null) {
+                        updateDailyLimitStatus(ci);
                     }
+                }
+            }
 
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        Toast.makeText(ParentDashboardActivity.this,
-                                "Error loading children: " + databaseError.getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                        useDemoChild();
-                    }
-                });
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(ParentDashboardActivity.this,
+                        "Error loading children: " + databaseError.getMessage(),
+                        Toast.LENGTH_SHORT).show();
+                useDemoChild();
+            }
+        };
+        childrenRef.addValueEventListener(childrenListener);
     }
 
     private void useDemoChild() {
-        // Add a demo child for testing
         ChildInfo demoChild = new ChildInfo();
         demoChild.childCode = "DEMO123";
         demoChild.childName = "Demo Child";
@@ -456,8 +476,11 @@ public class ParentDashboardActivity extends AppCompatActivity {
             }
         });
 
-        int selectIdx = 0;
-        if (pendingOpenChildCode != null) {
+        int selectIdx = -1;
+
+
+// Only use pending child if no previous selection found
+        if (selectIdx == -1 && pendingOpenChildCode != null) {
             for (int i = 0; i < childrenList.size(); i++) {
                 if (pendingOpenChildCode.equals(childrenList.get(i).childCode)) {
                     selectIdx = i;
@@ -465,6 +488,11 @@ public class ParentDashboardActivity extends AppCompatActivity {
                 }
             }
             pendingOpenChildCode = null;
+        }
+
+// Fallback
+        if (selectIdx == -1) {
+            selectIdx = 0;
         }
         spinnerChildren.setSelection(selectIdx, false);
     }
@@ -477,7 +505,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
             tvAppsUsed.setText(String.valueOf(appUsage.size()));
         }
     }
-
 
     private void openReportsForSelectedChild() {
         if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
@@ -577,166 +604,163 @@ public class ParentDashboardActivity extends AppCompatActivity {
             });
         }
     }
-        private void showAddChildDialog () {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle(R.string.add_child_title);
-            builder.setMessage(R.string.add_child_message);
 
-            final android.widget.EditText input = new android.widget.EditText(this);
-            input.setHint(R.string.add_child_name_hint);
-            int pad = (int) (16 * getResources().getDisplayMetrics().density);
-            input.setPadding(pad, pad, pad, pad);
-            builder.setView(input);
+    private void showAddChildDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.add_child_title);
+        builder.setMessage(R.string.add_child_message);
 
-            builder.setPositiveButton(R.string.add_child_button, (dialog, which) -> {
-                String entered = input.getText().toString().trim();
-                final String childName = entered.isEmpty()
-                        ? getString(R.string.add_child_default_name)
-                        : entered;
-                String code = authManager.generateChildCode();
-                if (code == null) {
-                    Toast.makeText(this, R.string.add_child_not_logged_in, Toast.LENGTH_LONG).show();
-                    return;
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint(R.string.add_child_name_hint);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
+        builder.setView(input);
+
+        builder.setPositiveButton(R.string.add_child_button, (dialog, which) -> {
+            String entered = input.getText().toString().trim();
+            final String childName = entered.isEmpty()
+                    ? getString(R.string.add_child_default_name)
+                    : entered;
+            String code = authManager.generateChildCode();
+            if (code == null) {
+                Toast.makeText(this, R.string.add_child_not_logged_in, Toast.LENGTH_LONG).show();
+                return;
+            }
+            authManager.saveChildCode(code, childName, new AuthManager.ChildCodeCallback() {
+                @Override
+                public void onSuccess(String savedCode) {
+                    runOnUiThread(() -> {
+                        // No need to call loadChildrenFromFirebase() — the persistent
+                        // listener will pick up the new child automatically
+                        showChildCodeDialog(savedCode, childName);
+                    });
                 }
-                authManager.saveChildCode(code, childName, new AuthManager.ChildCodeCallback() {
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> Toast.makeText(ParentDashboardActivity.this,
+                            getString(R.string.add_child_failed, error),
+                            Toast.LENGTH_LONG).show());
+                }
+            });
+        });
+        builder.setNegativeButton(android.R.string.cancel, null);
+        builder.show();
+    }
+
+    private void showChildOptionsMenu(View anchor) {
+        if (childrenList.isEmpty()) {
+            Toast.makeText(this, R.string.delete_child_select_first, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        PopupMenu popup = new PopupMenu(this, anchor);
+        popup.getMenuInflater().inflate(R.menu.menu_child_actions, popup.getMenu());
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_delete_child) {
+                confirmDeleteChild();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void confirmDeleteChild() {
+        if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
+            Toast.makeText(this, R.string.delete_child_select_first, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ChildInfo ci = childrenMap.get(currentChildCode);
+        String name = ci != null ? ci.childName : currentChildCode;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.delete_child_title)
+                .setMessage(getString(R.string.delete_child_message, name, currentChildCode))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.delete_child_confirm, (d, w) ->
+                        authManager.deleteChild(currentChildCode, new AuthManager.ChildCodeCallback() {
+                            @Override
+                            public void onSuccess(String code) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(ParentDashboardActivity.this,
+                                            R.string.delete_child_success, Toast.LENGTH_LONG).show();
+                                    currentChildCode = null;
+                                    // Persistent listener will update the list automatically
+                                });
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                runOnUiThread(() -> Toast.makeText(ParentDashboardActivity.this,
+                                        getString(R.string.delete_child_failed, error),
+                                        Toast.LENGTH_LONG).show());
+                            }
+                        }))
+                .show();
+    }
+
+    private void showChildCodeDialog(String code, String childName) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.add_child_code_title)
+                .setMessage(getString(R.string.add_child_code_message, childName, code))
+                .setNegativeButton(android.R.string.ok, null)
+                .setPositiveButton(R.string.add_child_set_limit_button, (d, w) ->
+                        showSetTimeLimitDialog(code, childName, 120))
+                .show();
+    }
+
+    private void openSetTimeLimitForSelectedChild() {
+        if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
+            Toast.makeText(this, "Select a child from the list first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ChildInfo ci = childrenMap.get(currentChildCode);
+        showSetTimeLimitDialog(currentChildCode,
+                ci != null ? ci.childName : getString(R.string.add_child_default_name),
+                ci != null ? ci.dailyLimit : 120);
+    }
+
+    private void updateDailyLimitStatus(ChildInfo child) {
+        if (tvDailyLimitStatus == null || child == null) {
+            return;
+        }
+        tvDailyLimitStatus.setText(getString(R.string.set_time_limit_card_status,
+                DurationFormat.hoursMinutes(child.dailyLimit)));
+    }
+
+    private void showSetTimeLimitDialog(String childCode, String childName,
+                                        long currentLimitMinutes) {
+        showSetTimeLimitDialog(childCode, childName, currentLimitMinutes, false, 1L);
+    }
+
+    private void showSetTimeLimitDialog(String childCode, String childName,
+                                        long currentLimitMinutes,
+                                        boolean clearDeviceLock, long minLimitMinutes) {
+        DailyLimitDialogHelper.show(this, childCode, currentLimitMinutes, minLimitMinutes,
+                R.string.set_time_limit_title,
+                getString(R.string.set_time_limit_message, childName),
+                clearDeviceLock,
+                new DailyLimitDialogHelper.Listener() {
                     @Override
-                    public void onSuccess(String savedCode) {
-                        runOnUiThread(() -> {
-                            loadChildrenFromFirebase();
-                            showChildCodeDialog(savedCode, childName);
-                        });
+                    public void onSaved(long newLimitMinutes) {
+                        // The persistent Firebase listener will automatically push
+                        // the updated dailyLimit back into childrenMap and refresh
+                        // updateDailyLimitStatus — no manual update needed here.
+                        Toast.makeText(ParentDashboardActivity.this,
+                                getString(R.string.set_time_limit_success, childName),
+                                Toast.LENGTH_LONG).show();
                     }
 
                     @Override
-                    public void onError(String error) {
-                        runOnUiThread(() -> Toast.makeText(ParentDashboardActivity.this,
-                                getString(R.string.add_child_failed, error),
-                                Toast.LENGTH_LONG).show());
+                    public void onCancelled() {
                     }
                 });
-            });
-            builder.setNegativeButton(android.R.string.cancel, null);
-            builder.show();
-        }
-
-        private void showChildOptionsMenu (View anchor){
-            if (childrenList.isEmpty()) {
-                Toast.makeText(this, R.string.delete_child_select_first, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            PopupMenu popup = new PopupMenu(this, anchor);
-            popup.getMenuInflater().inflate(R.menu.menu_child_actions, popup.getMenu());
-            popup.setOnMenuItemClickListener(item -> {
-                if (item.getItemId() == R.id.action_delete_child) {
-                    confirmDeleteChild();
-                    return true;
-                }
-                return false;
-            });
-            popup.show();
-        }
-
-        private void confirmDeleteChild () {
-            if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
-                Toast.makeText(this, R.string.delete_child_select_first, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            ChildInfo ci = childrenMap.get(currentChildCode);
-            String name = ci != null ? ci.childName : currentChildCode;
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.delete_child_title)
-                    .setMessage(getString(R.string.delete_child_message, name, currentChildCode))
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(R.string.delete_child_confirm, (d, w) ->
-                            authManager.deleteChild(currentChildCode, new AuthManager.ChildCodeCallback() {
-                                @Override
-                                public void onSuccess(String code) {
-                                    runOnUiThread(() -> {
-                                        Toast.makeText(ParentDashboardActivity.this,
-                                                R.string.delete_child_success, Toast.LENGTH_LONG).show();
-                                        currentChildCode = null;
-                                        loadChildrenFromFirebase();
-                                    });
-                                }
-
-                                @Override
-                                public void onError(String error) {
-                                    runOnUiThread(() -> Toast.makeText(ParentDashboardActivity.this,
-                                            getString(R.string.delete_child_failed, error),
-                                            Toast.LENGTH_LONG).show());
-                                }
-                            }))
-                    .show();
-        }
-
-        private void showChildCodeDialog (String code, String childName){
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.add_child_code_title)
-                    .setMessage(getString(R.string.add_child_code_message, childName, code))
-                    .setNegativeButton(android.R.string.ok, null)
-                    .setPositiveButton(R.string.add_child_set_limit_button, (d, w) ->
-                            showSetTimeLimitDialog(code, childName, 120))
-                    .show();
-        }
-
-        private void openSetTimeLimitForSelectedChild () {
-            if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
-                Toast.makeText(this, "Select a child from the list first.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            ChildInfo ci = childrenMap.get(currentChildCode);
-            showSetTimeLimitDialog(currentChildCode,
-                    ci != null ? ci.childName : getString(R.string.add_child_default_name),
-                    ci != null ? ci.dailyLimit : 120);
-        }
-
-        private void updateDailyLimitStatus (ChildInfo child){
-            if (tvDailyLimitStatus == null || child == null) {
-                return;
-            }
-            tvDailyLimitStatus.setText(getString(R.string.set_time_limit_card_status,
-                    DurationFormat.hoursMinutes(child.dailyLimit)));
-        }
-
-        private void showSetTimeLimitDialog (String childCode, String childName,
-        long currentLimitMinutes){
-            showSetTimeLimitDialog(childCode, childName, currentLimitMinutes, false, 1L);
-        }
-
-        private void showSetTimeLimitDialog (String childCode, String childName,
-        long currentLimitMinutes,
-        boolean clearDeviceLock, long minLimitMinutes){
-            DailyLimitDialogHelper.show(this, childCode, currentLimitMinutes, minLimitMinutes,
-                    R.string.set_time_limit_title,
-                    getString(R.string.set_time_limit_message, childName),
-                    clearDeviceLock,
-                    new DailyLimitDialogHelper.Listener() {
-                        @Override
-                        public void onSaved(long newLimitMinutes) {
-                            ChildInfo ci = childrenMap.get(childCode);
-                            if (ci != null) {
-                                ci.dailyLimit = newLimitMinutes;
-                                if (childCode.equals(currentChildCode)) {
-                                    updateDailyLimitStatus(ci);
-                                }
-                            }
-                            Toast.makeText(ParentDashboardActivity.this,
-                                    getString(R.string.set_time_limit_success, childName),
-                                    Toast.LENGTH_LONG).show();
-                        }
-
-                        @Override
-                        public void onCancelled() {
-                        }
-                    });
-        }
-
-        // Data class for child info
-        static class ChildInfo {
-            String childCode;
-            String childName;
-            String deviceName;
-            boolean isConnected;
-            long dailyLimit;
-        }
     }
+
+    static class ChildInfo {
+        String childCode;
+        String childName;
+        String deviceName;
+        boolean isConnected;
+        long dailyLimit;
+    }
+}

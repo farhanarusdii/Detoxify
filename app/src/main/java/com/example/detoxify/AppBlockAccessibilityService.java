@@ -23,8 +23,10 @@ import java.util.concurrent.Executors;
  */
 public class AppBlockAccessibilityService extends AccessibilityService {
 
-    private static final long HOME_DEBOUNCE_MS = 1_200L;
-    private static final long LOCK_PRESENT_DEBOUNCE_MS = 300L;  // was 600 — faster re-lock after Home
+    // FIX 3: Reduced from 1200ms to 400ms so fast tab-swipes are caught before
+    // the child lands on another screen.
+    private static final long HOME_DEBOUNCE_MS = 400L;
+    private static final long LOCK_PRESENT_DEBOUNCE_MS = 300L;
     private static final long LIMIT_POLL_MS = 1_500L;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -103,6 +105,26 @@ public class AppBlockAccessibilityService extends AccessibilityService {
             return;
         }
         int type = event.getEventType();
+
+        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
+        boolean gated = PhoneLockPolicy.isPhoneGated(prefs);
+
+        // FIX 3: While the phone is locked, also intercept scroll events so that
+        // swiping between tabs within an app (e.g. browser tabs, recent apps) is blocked.
+        // TYPE_VIEW_SCROLLED fires on tab swipes that don't produce a WINDOW_STATE_CHANGED.
+        if (gated && type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            CharSequence pkgSeq = event.getPackageName();
+            if (pkgSeq != null) {
+                String pkg = pkgSeq.toString();
+                if (!pkg.equals(getPackageName())
+                        && !PhoneLockPolicy.isPackageAllowedWhenPhoneLocked(this, pkg)
+                        && !PhoneLockPolicy.isInputMethodPackage(pkg)) {
+                    handlePhoneGatedWindow(pkg, prefs);
+                }
+            }
+            return;
+        }
+
         if (type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
                 && type != AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             return;
@@ -113,8 +135,6 @@ public class AppBlockAccessibilityService extends AccessibilityService {
             return;
         }
         String pkg = pkgSeq.toString();
-        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        boolean gated = PhoneLockPolicy.isPhoneGated(prefs);
 
         if (pkg.equals(getPackageName())) {
             if (gated) {
