@@ -79,8 +79,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
 
     private String pendingOpenChildCode;
 
-    // FIX 2: Persistent listener for children so the dashboard updates live when
-    // the parent changes a limit — instead of only reading once at launch.
     private Query childrenRef;
     private ValueEventListener childrenListener;
 
@@ -153,7 +151,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
     protected void onDestroy() {
         detachUsageListener();
         detachDeviceLockListener();
-        // FIX 2: Clean up the persistent children listener to avoid leaks
         if (childrenRef != null && childrenListener != null) {
             childrenRef.removeEventListener(childrenListener);
         }
@@ -336,15 +333,12 @@ public class ParentDashboardActivity extends AppCompatActivity {
         builder.show();
     }
 
-    // FIX 2: Use a persistent ValueEventListener so the dashboard automatically
-    // reflects limit changes pushed from Firebase without requiring a restart.
     private void loadChildrenFromFirebase() {
         if (parentId.isEmpty()) {
             Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Remove any previous listener before attaching a new one
         if (childrenRef != null && childrenListener != null) {
             childrenRef.removeEventListener(childrenListener);
         }
@@ -379,8 +373,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
 
                 updateChildrenSpinner();
 
-                // FIX 2: Refresh the displayed limit for the currently selected child
-                // every time Firebase delivers an update (e.g. after parent saves new limit)
                 if (currentChildCode != null && !currentChildCode.isEmpty()) {
                     ChildInfo ci = childrenMap.get(currentChildCode);
                     if (ci != null) {
@@ -478,8 +470,17 @@ public class ParentDashboardActivity extends AppCompatActivity {
 
         int selectIdx = -1;
 
+        // First try to restore the currently selected child
+        if (currentChildCode != null && !currentChildCode.isEmpty()) {
+            for (int i = 0; i < childrenList.size(); i++) {
+                if (currentChildCode.equals(childrenList.get(i).childCode)) {
+                    selectIdx = i;
+                    break;
+                }
+            }
+        }
 
-// Only use pending child if no previous selection found
+        // Only use pending child if no current selection found
         if (selectIdx == -1 && pendingOpenChildCode != null) {
             for (int i = 0; i < childrenList.size(); i++) {
                 if (pendingOpenChildCode.equals(childrenList.get(i).childCode)) {
@@ -490,7 +491,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
             pendingOpenChildCode = null;
         }
 
-// Fallback
+        // Fallback to first child
         if (selectIdx == -1) {
             selectIdx = 0;
         }
@@ -506,15 +507,31 @@ public class ParentDashboardActivity extends AppCompatActivity {
         }
     }
 
+    // ─── FIX 1: Now correctly passes MODE_REPORTS so only weekly + monthly tabs show ───
     private void openReportsForSelectedChild() {
         if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
             Toast.makeText(this, "Select a child from the list first.", Toast.LENGTH_SHORT).show();
             return;
         }
-        Intent intent = new Intent(this, ReportsActivity.class);
         ChildInfo ci = childrenMap.get(currentChildCode);
-        intent.putExtra("childName", ci != null ? ci.childName : "");
-        intent.putExtra("childCode", currentChildCode);
+        Intent intent = new Intent(this, ReportsActivity.class);
+        intent.putExtra(ReportsActivity.EXTRA_CHILD_NAME, ci != null ? ci.childName : "");
+        intent.putExtra(ReportsActivity.EXTRA_CHILD_CODE, currentChildCode);
+        intent.putExtra(ReportsActivity.EXTRA_MODE, ReportsActivity.MODE_REPORTS); // <-- FIXED
+        startActivity(intent);
+    }
+
+    // ─── Correctly passes MODE_INSIGHTS so only behaviour + mood tabs show ───
+    private void openInsightsForSelectedChild() {
+        if (currentChildCode == null || currentChildCode.isEmpty() || childrenList.isEmpty()) {
+            Toast.makeText(this, "Select a child from the list first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ChildInfo ci = childrenMap.get(currentChildCode);
+        Intent intent = new Intent(this, ReportsActivity.class);
+        intent.putExtra(ReportsActivity.EXTRA_CHILD_NAME, ci != null ? ci.childName : "");
+        intent.putExtra(ReportsActivity.EXTRA_CHILD_CODE, currentChildCode);
+        intent.putExtra(ReportsActivity.EXTRA_MODE, ReportsActivity.MODE_INSIGHTS);
         startActivity(intent);
     }
 
@@ -585,18 +602,20 @@ public class ParentDashboardActivity extends AppCompatActivity {
                             .show();
                 }
             });
-
+        }
+        if (cardReports != null) {
+            // FIX 1: Routes to MODE_REPORTS (weekly + monthly only)
             cardReports.setOnClickListener(v -> openReportsForSelectedChild());
-
-            if (cardCompareChildren != null) {
-                cardCompareChildren.setOnClickListener(v ->
-                        startActivity(new Intent(this, CompareChildrenActivity.class)));
-            }
-
-            if (cardInsights != null) {
-                cardInsights.setOnClickListener(v -> openReportsForSelectedChild());
-            }
-
+        }
+        if (cardInsights != null) {
+            // FIX 2: Was missing entirely — now routes to MODE_INSIGHTS (behaviour + mood only)
+            cardInsights.setOnClickListener(v -> openInsightsForSelectedChild());
+        }
+        if (cardCompareChildren != null) {
+            cardCompareChildren.setOnClickListener(v ->
+                    startActivity(new Intent(this, CompareChildrenActivity.class)));
+        }
+        if (btnSwitchMode != null) {
             btnSwitchMode.setOnClickListener(v -> {
                 sharedPreferences.edit().putString("userMode", "child").apply();
                 startActivity(new Intent(this, ChildDashboardActivity.class));
@@ -629,11 +648,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
             authManager.saveChildCode(code, childName, new AuthManager.ChildCodeCallback() {
                 @Override
                 public void onSuccess(String savedCode) {
-                    runOnUiThread(() -> {
-                        // No need to call loadChildrenFromFirebase() — the persistent
-                        // listener will pick up the new child automatically
-                        showChildCodeDialog(savedCode, childName);
-                    });
+                    runOnUiThread(() -> showChildCodeDialog(savedCode, childName));
                 }
 
                 @Override
@@ -684,7 +699,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
                                     Toast.makeText(ParentDashboardActivity.this,
                                             R.string.delete_child_success, Toast.LENGTH_LONG).show();
                                     currentChildCode = null;
-                                    // Persistent listener will update the list automatically
                                 });
                             }
 
@@ -742,9 +756,6 @@ public class ParentDashboardActivity extends AppCompatActivity {
                 new DailyLimitDialogHelper.Listener() {
                     @Override
                     public void onSaved(long newLimitMinutes) {
-                        // The persistent Firebase listener will automatically push
-                        // the updated dailyLimit back into childrenMap and refresh
-                        // updateDailyLimitStatus — no manual update needed here.
                         Toast.makeText(ParentDashboardActivity.this,
                                 getString(R.string.set_time_limit_success, childName),
                                 Toast.LENGTH_LONG).show();

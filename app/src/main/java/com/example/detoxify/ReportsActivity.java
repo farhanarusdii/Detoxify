@@ -53,7 +53,8 @@ public class ReportsActivity extends AppCompatActivity {
     private String childCode;
     private String childName;
     private String reportMode = MODE_REPORTS;
-
+    private TextView tvLowMoodAvg;
+    private TextView tvHighMoodAvg;
     @Nullable
     private ValueEventListener dailyListener;
     @Nullable
@@ -116,7 +117,8 @@ public class ReportsActivity extends AppCompatActivity {
         tvPatterns = findViewById(R.id.tv_patterns);
         tvMoodInsight = findViewById(R.id.tv_mood_insight);
         tvMoodRecent = findViewById(R.id.tv_mood_recent);
-
+        tvLowMoodAvg = findViewById(R.id.tv_low_mood_avg);
+        tvHighMoodAvg = findViewById(R.id.tv_high_mood_avg);
         tvChildName.setText(childName);
         tvMonthLabel.setText(UsageReportHelper.currentMonthLabel());
 
@@ -363,7 +365,18 @@ public class ReportsActivity extends AppCompatActivity {
             tvMoodRecent.setText("");
             return;
         }
+        Long lowAvg = snap.child("lowMoodAvgMinutes").getValue(Long.class);
+        Long highAvg = snap.child("highMoodAvgMinutes").getValue(Long.class);
+        Long pairedDays = snap.child("pairedDays").getValue(Long.class);
 
+        if (tvLowMoodAvg != null) {
+            tvLowMoodAvg.setText(lowAvg != null && lowAvg > 0
+                    ? DurationFormat.hoursMinutes(lowAvg) : "—");
+        }
+        if (tvHighMoodAvg != null) {
+            tvHighMoodAvg.setText(highAvg != null && highAvg > 0
+                    ? DurationFormat.hoursMinutes(highAvg) : "—");
+        }
         String insight = snap.child("insightText").getValue(String.class);
         tvMoodInsight.setText(insight != null ? insight : "");
 

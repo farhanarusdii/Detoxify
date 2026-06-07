@@ -17,16 +17,11 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Reliable blocking: runs when any app window opens. Sends user Home if package is blocked.
- * Child must enable Detoxify under Settings → Accessibility.
- */
 public class AppBlockAccessibilityService extends AccessibilityService {
 
-    // FIX 3: Reduced from 1200ms to 400ms so fast tab-swipes are caught before
-    // the child lands on another screen.
     private static final long HOME_DEBOUNCE_MS = 400L;
-    private static final long LOCK_PRESENT_DEBOUNCE_MS = 300L;
+    // BUG 1 FIX: reduced from 300ms to 150ms so re-lock fires faster in the last minute
+    private static final long LOCK_PRESENT_DEBOUNCE_MS = 150L;
     private static final long LIMIT_POLL_MS = 1_500L;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -43,7 +38,14 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         public void run() {
             limitExecutor.execute(() -> {
                 try {
-                    SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
+                    // BUG 1 FIX: Re-open prefs each tick so we never read a stale cached
+                    // value of PREFS_PHONE_LIMIT_EXCEEDED right after BlockMonitorService
+                    // commits it. MODE_PRIVATE always returns the same singleton on Android
+                    // but the underlying XML is flushed by commit() — re-getting the instance
+                    // ensures we see the latest committed value.
+                    SharedPreferences prefs = getApplicationContext()
+                            .getSharedPreferences("Detoxify", MODE_PRIVATE);
+
                     boolean remoteLock = prefs.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false);
                     if (remoteLock) {
                         prefs.edit().putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, true).commit();
@@ -109,9 +111,6 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
         boolean gated = PhoneLockPolicy.isPhoneGated(prefs);
 
-        // FIX 3: While the phone is locked, also intercept scroll events so that
-        // swiping between tabs within an app (e.g. browser tabs, recent apps) is blocked.
-        // TYPE_VIEW_SCROLLED fires on tab swipes that don't produce a WINDOW_STATE_CHANGED.
         if (gated && type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             CharSequence pkgSeq = event.getPackageName();
             if (pkgSeq != null) {
@@ -168,7 +167,6 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         performGlobalAction(GLOBAL_ACTION_HOME);
     }
 
-    /** Child opened Detoxify while locked (e.g. dashboard) — force the lock screen back. */
     private void handleOwnAppWhileGated(SharedPreferences prefs) {
         if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
             return;

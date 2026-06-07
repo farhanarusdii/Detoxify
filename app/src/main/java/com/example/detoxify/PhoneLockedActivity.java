@@ -21,18 +21,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Full-screen gate when the child device hits its daily limit or a parent remote full lock.
- * Closest third-party analogue to Family Link’s pause: blocks other apps via
- * {@link AppBlockAccessibilityService} while this screen (or exempt dialer UIs) may show.
- */
 public class PhoneLockedActivity extends AppCompatActivity {
 
     public static final String EXTRA_LOCK_REASON = "lockReason";
     public static final String EXTRA_SHOW_DENIED_DIALOG = "showDeniedDialog";
-    /** Daily screen-time budget used up (still obeys parent remote lock if both apply). */
     public static final int LOCK_REASON_DAILY_LIMIT = 1;
-    /** Parent turned on “lock whole phone” from their dashboard. */
     public static final int LOCK_REASON_REMOTE = 2;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -68,6 +61,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Mark BEFORE super so accessibility sees it immediately
         PhoneLockGate.markLockScreenResumed(true);
         super.onCreate(savedInstanceState);
         lockReason = getIntent().getIntExtra(EXTRA_LOCK_REASON, LOCK_REASON_DAILY_LIMIT);
@@ -86,7 +80,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // Intentionally ignore — stay on lock until limit clears or parent unlocks.
+                // Intentionally ignore back — stay on lock screen.
             }
         });
 
@@ -129,17 +123,37 @@ public class PhoneLockedActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        PhoneLockGate.markLockScreenResumed(true);
+        tryDismissIfUnderLimit();
+    }
+
+    @Override
+    protected void onPause() {
+        // BUG 2 FIX: Mark NOT resumed immediately in onPause, not onStop.
+        // This means accessibility sees lockScreenResumed=false the moment we
+        // leave, so handlePhoneGatedWindow fires without waiting for onStop.
+        PhoneLockGate.markLockScreenResumed(false);
+
+        // Re-request the lock immediately so the lock screen comes back on top
+        // before any other app has a chance to draw. Skip if a child dialog is open
+        // (password entry, time request) — endChildInteraction will re-launch.
+        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
+        if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
+            PhoneLockGate.requestLockPresentation(this, lockReason);
+        }
+        super.onPause();
+    }
+
+    @Override
     protected void onStop() {
         mainHandler.removeCallbacks(recheckLimit);
         try {
             unregisterReceiver(deniedReceiver);
         } catch (IllegalArgumentException ignored) {
         }
-        PhoneLockGate.markLockScreenResumed(false);
-        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
-            PhoneLockGate.requestLockPresentation(this, lockReason);
-        }
+        // markLockScreenResumed(false) already done in onPause — no need to repeat
         super.onStop();
     }
 
@@ -150,13 +164,6 @@ public class PhoneLockedActivity extends AppCompatActivity {
         if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
             PhoneLockGate.requestLockPresentation(this, lockReason);
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        PhoneLockGate.markLockScreenResumed(true);
-        tryDismissIfUnderLimit();
     }
 
     private void applyLockReasonUi() {
@@ -259,7 +266,8 @@ public class PhoneLockedActivity extends AppCompatActivity {
         android.view.inputmethod.InputMethodManager imm =
                 (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (imm != null) {
-            input.postDelayed(() -> imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT), 200);
+            input.postDelayed(() -> imm.showSoftInput(input,
+                    android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT), 200);
         }
     }
 

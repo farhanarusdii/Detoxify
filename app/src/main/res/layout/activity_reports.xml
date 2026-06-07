@@ -39,274 +39,530 @@
                 android:textSize="13sp"
                 android:layout_marginBottom="@dimen/space_16" />
 
+            <!-- ══════════════════════════════════════
+                 REPORTS SECTION (weekly + monthly)
+                 ══════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/section_weekly_monthly"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-            <!-- Weekly -->
-            <TextView
-                style="@style/Detoxify.SectionTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reports_weekly_section"
-                android:layout_marginBottom="@dimen/space_8" />
+                <!-- Weekly -->
+                <TextView
+                    style="@style/Detoxify.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/reports_weekly_section"
+                    android:layout_marginBottom="@dimen/space_8" />
 
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Detoxify.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_16">
-
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_16">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/reports_weekly_heading"
-                        android:textSize="14sp"
-                        android:textColor="@color/detox_text_secondary" />
-
-                    <TextView
-                        android:id="@+id/tv_weekly_total"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0h 0m"
-                        android:textSize="32sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_primary"
-                        android:layout_marginTop="@dimen/space_4" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/reports_daily_avg_heading"
-                        android:textSize="14sp"
-                        android:textColor="@color/detox_text_secondary"
-                        android:layout_marginTop="@dimen/space_12" />
-
-                    <TextView
-                        android:id="@+id/tv_daily_average"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0h 0m"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_secondary"
-                        android:layout_marginTop="@dimen/space_4" />
-
-                    <TextView
-                        android:id="@+id/tv_weekly_footnote"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Monthly -->
-            <TextView
-                style="@style/Detoxify.SectionTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reports_monthly_section"
-                android:layout_marginBottom="@dimen/space_8" />
-
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Detoxify.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_16">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_16">
-
-                    <TextView
-                        android:id="@+id/tv_month_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="@color/detox_text_secondary" />
-
-                    <TextView
-                        android:id="@+id/tv_monthly_total"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0h 0m"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_olive"
-                        android:layout_marginTop="@dimen/space_4" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_16"
-                        android:text="@string/reports_monthly_top_heading"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_on_surface"
-                        android:textSize="15sp" />
+                    android:layout_marginBottom="@dimen/space_16">
 
                     <LinearLayout
-                        android:id="@+id/layout_monthly_top_apps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginTop="@dimen/space_8" />
+                        android:padding="@dimen/space_16">
 
-                    <TextView
-                        android:id="@+id/tv_monthly_footnote"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/reports_weekly_heading"
+                            android:textSize="14sp"
+                            android:textColor="@color/detox_text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tv_weekly_total"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0h 0m"
+                            android:textSize="32sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/detox_primary"
+                            android:layout_marginTop="@dimen/space_4" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/reports_daily_avg_heading"
+                            android:textSize="14sp"
+                            android:textColor="@color/detox_text_secondary"
+                            android:layout_marginTop="@dimen/space_12" />
+
+                        <TextView
+                            android:id="@+id/tv_daily_average"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0h 0m"
+                            android:textSize="24sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/detox_secondary"
+                            android:layout_marginTop="@dimen/space_4" />
+
+                        <TextView
+                            android:id="@+id/tv_weekly_footnote"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:textColor="@color/detox_text_secondary"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Monthly -->
+                <TextView
+                    style="@style/Detoxify.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/reports_monthly_section"
+                    android:layout_marginBottom="@dimen/space_8" />
+
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_16">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
+
+                        <TextView
+                            android:id="@+id/tv_month_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="14sp"
+                            android:textColor="@color/detox_text_secondary" />
+
+                        <TextView
+                            android:id="@+id/tv_monthly_total"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0h 0m"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/detox_olive"
+                            android:layout_marginTop="@dimen/space_4" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_16"
+                            android:text="@string/reports_monthly_top_heading"
+                            android:textStyle="bold"
+                            android:textColor="@color/detox_on_surface"
+                            android:textSize="15sp" />
+
+                        <LinearLayout
+                            android:id="@+id/layout_monthly_top_apps"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="@dimen/space_8" />
+
+                        <TextView
+                            android:id="@+id/tv_monthly_footnote"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:textColor="@color/detox_text_secondary"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
 
+            <!-- ══════════════════════════════════════
+                 INSIGHTS SECTION (behaviour + mood)
+                 ══════════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/section_insights"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-            <!-- Behaviour -->
-            <TextView
-                style="@style/Detoxify.SectionTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/insights_behavior_heading"
-                android:layout_marginBottom="@dimen/space_8" />
+                <!-- ── BEHAVIOUR ── -->
+                <TextView
+                    style="@style/Detoxify.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/insights_behavior_heading"
+                    android:layout_marginBottom="@dimen/space_8" />
 
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Detoxify.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_16">
-
-                <LinearLayout
+                <!-- Risk + summary card -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_16">
+                    android:layout_marginBottom="@dimen/space_12">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/insights_risk_label"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tv_risk_level"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_4"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_primary" />
-
-                    <TextView
-                        android:id="@+id/tv_behavior_summary"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:textColor="@color/detox_on_surface"
-                        android:textSize="15sp"
-                        android:lineSpacingMultiplier="1.15" />
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
 
-                    <TextView
-                        android:id="@+id/tv_overuse"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="13sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/insights_risk_label"
+                            android:textColor="@color/detox_text_secondary"
+                            android:textSize="12sp" />
 
-                    <TextView
-                        android:id="@+id/tv_late_night"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_4"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="13sp" />
+                        <TextView
+                            android:id="@+id/tv_risk_level"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:textSize="26sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/detox_primary" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:text="@string/insights_patterns_heading"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_on_surface" />
+                        <TextView
+                            android:id="@+id/tv_behavior_summary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:textColor="@color/detox_on_surface"
+                            android:textSize="14sp"
+                            android:lineSpacingMultiplier="1.3" />
 
-                    <TextView
-                        android:id="@+id/tv_patterns"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_4"
-                        android:textColor="@color/detox_on_surface"
-                        android:textSize="14sp"
-                        android:lineSpacingMultiplier="1.2" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-            <!-- Mood -->
-            <TextView
-                style="@style/Detoxify.SectionTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/insights_mood_heading"
-                android:layout_marginBottom="@dimen/space_8" />
-
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Detoxify.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/space_16">
-
-                <LinearLayout
+                <!-- Today's signals card (overuse + late night) -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/space_16">
+                    android:layout_marginBottom="@dimen/space_12">
 
-                    <TextView
-                        android:id="@+id/tv_mood_insight"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/detox_on_surface"
-                        android:textSize="15sp"
-                        android:lineSpacingMultiplier="1.15" />
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:text="@string/mood_recent_heading"
-                        android:textStyle="bold"
-                        android:textColor="@color/detox_on_surface" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Today's Signals"
+                            android:textColor="@color/detox_text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="@dimen/space_8" />
 
-                    <TextView
-                        android:id="@+id/tv_mood_recent"
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="@dimen/space_6">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📱"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="@dimen/space_8" />
+
+                            <TextView
+                                android:id="@+id/tv_overuse"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/detox_on_surface"
+                                android:textSize="14sp"
+                                android:lineSpacingMultiplier="1.2" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌙"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="@dimen/space_8" />
+
+                            <TextView
+                                android:id="@+id/tv_late_night"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textColor="@color/detox_on_surface"
+                                android:textSize="14sp"
+                                android:lineSpacingMultiplier="1.2" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Patterns card -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_24">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_4"
-                        android:textColor="@color/detox_text_secondary"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.25" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="@dimen/space_8">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📊"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="@dimen/space_8" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/insights_patterns_heading"
+                                android:textStyle="bold"
+                                android:textColor="@color/detox_on_surface"
+                                android:textSize="15sp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_patterns"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/detox_on_surface"
+                            android:textSize="14sp"
+                            android:lineSpacingMultiplier="1.4" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ── MOOD & CORRELATION ── -->
+                <TextView
+                    style="@style/Detoxify.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/insights_mood_heading"
+                    android:layout_marginBottom="@dimen/space_8" />
+
+                <!-- Correlation insight + low vs high mood comparison -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_12">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="@dimen/space_12">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔗"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="@dimen/space_8" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Mood ↔ Screen Time Correlation"
+                                android:textStyle="bold"
+                                android:textColor="@color/detox_on_surface"
+                                android:textSize="15sp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_mood_insight"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/detox_on_surface"
+                            android:textSize="14sp"
+                            android:lineSpacingMultiplier="1.4" />
+
+                        <!-- Low mood vs high mood side-by-side -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="@dimen/space_16">
+
+                            <!-- Low mood box -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal"
+                                android:background="@color/detox_surface"
+                                android:padding="@dimen/space_12">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="😔"
+                                    android:textSize="24sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Low mood days"
+                                    android:textColor="@color/detox_text_secondary"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="@dimen/space_4" />
+
+                                <TextView
+                                    android:id="@+id/tv_low_mood_avg"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textColor="@color/detox_rose"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginTop="@dimen/space_4" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="avg screen time"
+                                    android:textColor="@color/detox_text_secondary"
+                                    android:textSize="10sp" />
+
+                            </LinearLayout>
+
+                            <!-- Spacer -->
+                            <View
+                                android:layout_width="@dimen/space_8"
+                                android:layout_height="match_parent" />
+
+                            <!-- High mood box -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal"
+                                android:background="@color/detox_surface"
+                                android:padding="@dimen/space_12">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="😊"
+                                    android:textSize="24sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Good mood days"
+                                    android:textColor="@color/detox_text_secondary"
+                                    android:textSize="11sp"
+                                    android:layout_marginTop="@dimen/space_4" />
+
+                                <TextView
+                                    android:id="@+id/tv_high_mood_avg"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="—"
+                                    android:textColor="@color/detox_olive"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginTop="@dimen/space_4" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="avg screen time"
+                                    android:textColor="@color/detox_text_secondary"
+                                    android:textSize="10sp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Recent check-ins card -->
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Detoxify.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_16">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/space_16">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="@dimen/space_12">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📅"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="@dimen/space_8" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/mood_recent_heading"
+                                android:textStyle="bold"
+                                android:textColor="@color/detox_on_surface"
+                                android:textSize="15sp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_mood_recent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/detox_text_secondary"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.5"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
 
