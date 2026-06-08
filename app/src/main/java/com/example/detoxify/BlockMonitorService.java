@@ -239,6 +239,10 @@ public class BlockMonitorService extends Service {
                         presentRemoteLockScreen();
                     }
                 } else {
+                    // Remote lock lifted — clear BOTH flags so isPhoneGated() returns false,
+                    // then tell the lock screen to dismiss immediately.
+                    PhoneLockGate.clearAllLockFlags(BlockMonitorService.this);
+                    PhoneLockGate.broadcastUnlock(BlockMonitorService.this);
                     scheduleLimitRecheck();
                 }
             }
@@ -270,7 +274,13 @@ public class BlockMonitorService extends Service {
                 }
                 if ("approved".equals(status) || "denied".equals(status)) {
                     prefs.edit().putString(PREFS_LAST_APPLIED_TIME_REQUEST_ID, rid).apply();
-                    if ("denied".equals(status)) {
+                    if ("approved".equals(status)) {
+                        // Clear both gate flags immediately (commit = synchronous) so
+                        // accessibility, the poll, and the lock screen all see them gone.
+                        PhoneLockGate.clearAllLockFlags(BlockMonitorService.this);
+                        // Tell PhoneLockedActivity to finish() right now.
+                        PhoneLockGate.broadcastUnlock(BlockMonitorService.this);
+                    } else {
                         mainHandler.post(() ->
                                 PhoneLockGate.showDeniedNoticeOnLockScreen(BlockMonitorService.this));
                     }

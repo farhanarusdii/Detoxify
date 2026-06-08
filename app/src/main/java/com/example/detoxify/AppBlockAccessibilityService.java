@@ -20,7 +20,6 @@ import java.util.concurrent.Executors;
 public class AppBlockAccessibilityService extends AccessibilityService {
 
     private static final long HOME_DEBOUNCE_MS = 400L;
-    // BUG 1 FIX: reduced from 300ms to 150ms so re-lock fires faster in the last minute
     private static final long LOCK_PRESENT_DEBOUNCE_MS = 150L;
     private static final long LIMIT_POLL_MS = 1_500L;
 
@@ -29,40 +28,47 @@ public class AppBlockAccessibilityService extends AccessibilityService {
 
     private long lastHomeAt;
     private String lastBlockedPkg;
-    private long lastPhoneLockHomeAt;
     private String lastPhoneLockPkg;
+    private long lastPhoneLockHomeAt;
     private long lastLockScreenRequestAt;
 
+    /**
+     * Set to true when ACTION_UNLOCK_PHONE arrives so the poll doesn't immediately
+     * re-lock while the limit recheck is still in-flight.  Cleared after 3 seconds.
+     */
+    private volatile boolean unlockInProgress;
+
+    // ── Poll: runs every 1.5 s on a background thread ──────────────────────────
     private final Runnable limitEnforcementPoll = new Runnable() {
         @Override
         public void run() {
             limitExecutor.execute(() -> {
                 try {
-                    // BUG 1 FIX: Re-open prefs each tick so we never read a stale cached
-                    // value of PREFS_PHONE_LIMIT_EXCEEDED right after BlockMonitorService
-                    // commits it. MODE_PRIVATE always returns the same singleton on Android
-                    // but the underlying XML is flushed by commit() — re-getting the instance
-                    // ensures we see the latest committed value.
+                    if (unlockInProgress) {
+                        return; // parent just approved — don't re-lock yet
+                    }
+                    // Always re-open prefs so we see the latest commit() from BlockMonitorService.
                     SharedPreferences prefs = getApplicationContext()
                             .getSharedPreferences("Detoxify", MODE_PRIVATE);
 
                     boolean remoteLock = prefs.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false);
                     if (remoteLock) {
                         prefs.edit().putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, true).commit();
-                        mainHandler.post(() -> presentLockIfNeeded(
-                                PhoneLockedActivity.LOCK_REASON_REMOTE, true));
+                        mainHandler.post(() -> forceLockScreen(PhoneLockedActivity.LOCK_REASON_REMOTE));
                         return;
                     }
+
                     PhoneLimitEvaluator.Result result = PhoneLimitEvaluator.evaluate(
                             AppBlockAccessibilityService.this, prefs);
                     prefs.edit().putLong("used_today", result.usedMinutes).apply();
 
                     if (result.shouldLock) {
+                        // commit() is intentional: accessibility & lock screen read this flag
+                        // immediately after; apply() is async and causes a ~30 s gap.
                         prefs.edit()
                                 .putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, true)
                                 .commit();
-                        mainHandler.post(() -> presentLockIfNeeded(
-                                PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT, true));
+                        mainHandler.post(() -> forceLockScreen(PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT));
                     } else {
                         prefs.edit()
                                 .putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false)
@@ -75,41 +81,70 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         }
     };
 
+    // ── Receivers ───────────────────────────────────────────────────────────────
+
+    /** Receives ACTION_ENFORCE_PHONE_LOCK from BlockMonitorService. */
     private final BroadcastReceiver enforceLockReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent == null) {
-                return;
-            }
+            if (intent == null) return;
             int reason = intent.getIntExtra(PhoneLockedActivity.EXTRA_LOCK_REASON,
                     PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT);
-            presentLockIfNeeded(reason, true);
+            forceLockScreen(reason);
         }
     };
+
+    /**
+     * Receives ACTION_UNLOCK_PHONE when parent approves.
+     * Pauses enforcement so the poll doesn't re-lock immediately after the flags are cleared.
+     */
+    private final BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            unlockInProgress = true;
+            // After 3 s the limit recheck in BlockMonitorService will have run and
+            // set PREFS_PHONE_LIMIT_EXCEEDED=false, so resume normal enforcement.
+            mainHandler.postDelayed(() -> unlockInProgress = false, 3_000L);
+        }
+    };
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────────
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        IntentFilter filter = new IntentFilter(PhoneLockGate.ACTION_ENFORCE_PHONE_LOCK);
+
+        IntentFilter enforceFilt = new IntentFilter(PhoneLockGate.ACTION_ENFORCE_PHONE_LOCK);
+        IntentFilter unlockFilt  = new IntentFilter(PhoneLockGate.ACTION_UNLOCK_PHONE);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(enforceLockReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(enforceLockReceiver, enforceFilt, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(unlockReceiver,      unlockFilt,  Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(enforceLockReceiver, filter);
+            registerReceiver(enforceLockReceiver, enforceFilt);
+            registerReceiver(unlockReceiver,      unlockFilt);
         }
+
         mainHandler.removeCallbacks(limitEnforcementPoll);
         mainHandler.post(limitEnforcementPoll);
         BlockMonitorService.startMonitoring(this);
     }
 
+    // ── Accessibility events ────────────────────────────────────────────────────
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) {
-            return;
-        }
+        if (event == null) return;
+
         int type = event.getEventType();
 
-        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
+        // Re-read prefs fresh every event so we see the latest commit().
+        SharedPreferences prefs = getApplicationContext()
+                .getSharedPreferences("Detoxify", MODE_PRIVATE);
         boolean gated = PhoneLockPolicy.isPhoneGated(prefs);
+
+        // While unlock is in progress don't enforce anything.
+        if (unlockInProgress) return;
 
         if (gated && type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
             CharSequence pkgSeq = event.getPackageName();
@@ -130,15 +165,11 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         }
 
         CharSequence pkgSeq = event.getPackageName();
-        if (pkgSeq == null) {
-            return;
-        }
+        if (pkgSeq == null) return;
         String pkg = pkgSeq.toString();
 
         if (pkg.equals(getPackageName())) {
-            if (gated) {
-                handleOwnAppWhileGated(prefs);
-            }
+            if (gated) handleOwnAppWhileGated(prefs);
             return;
         }
 
@@ -147,53 +178,47 @@ public class AppBlockAccessibilityService extends AccessibilityService {
             return;
         }
 
+        // Not gated — enforce blocked-apps list.
         Set<String> blocked = prefs.getStringSet(BlockMonitorService.PREFS_BLOCKED_PACKAGES,
                 Collections.emptySet());
-        if (blocked == null || blocked.isEmpty()) {
-            return;
-        }
+        if (blocked == null || blocked.isEmpty()) return;
+
         HashSet<String> copy = new HashSet<>(blocked);
-        if (!copy.contains(pkg)) {
-            return;
-        }
+        if (!copy.contains(pkg)) return;
 
         long now = android.os.SystemClock.uptimeMillis();
-        if (pkg.equals(lastBlockedPkg) && now - lastHomeAt < 600L) {
-            return;
-        }
+        if (pkg.equals(lastBlockedPkg) && now - lastHomeAt < 600L) return;
         lastBlockedPkg = pkg;
         lastHomeAt = now;
-
         performGlobalAction(GLOBAL_ACTION_HOME);
     }
 
+    // ── Gating helpers ──────────────────────────────────────────────────────────
+
     private void handleOwnAppWhileGated(SharedPreferences prefs) {
-        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
-            return;
-        }
-        if (PhoneLockGate.isLockScreenResumed()
-                || PhoneLockGate.isLockScreenLaunching()
-                || PhoneLockGate.isChildInteractionPaused()) {
-            return;
-        }
+        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) return;
+        // Lock screen is already on top — nothing to do.
+        if (PhoneLockGate.isLockScreenResumed()) return;
+        if (PhoneLockGate.isLockScreenLaunching()) return;
+        if (PhoneLockGate.isChildInteractionPaused()) return;
+
+        // Our app is visible but it's NOT the lock screen (e.g. ChildDashboard).
+        // Send Home so the launcher appears, then immediately overlay the lock screen.
         int reason = prefs.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false)
                 ? PhoneLockedActivity.LOCK_REASON_REMOTE
                 : PhoneLockedActivity.LOCK_REASON_DAILY_LIMIT;
-        long now = android.os.SystemClock.uptimeMillis();
         performGlobalAction(GLOBAL_ACTION_HOME);
-        requestLockScreen(reason, now);
+        requestLockScreen(reason);
     }
 
     private void handlePhoneGatedWindow(String pkg, SharedPreferences prefs) {
-        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
-            return;
-        }
-        if (PhoneLockPolicy.isPackageAllowedWhenPhoneLocked(this, pkg)) {
-            return;
-        }
-        if (PhoneLockPolicy.isInputMethodPackage(pkg)) {
-            return;
-        }
+        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) return;
+        // If lock screen is already on top or mid-launch, don't pile on more launches —
+        // that is exactly what caused the rapid flicker loop.
+        if (PhoneLockGate.isLockScreenResumed()) return;
+        if (PhoneLockGate.isLockScreenLaunching()) return;
+        if (PhoneLockPolicy.isPackageAllowedWhenPhoneLocked(this, pkg)) return;
+        if (PhoneLockPolicy.isInputMethodPackage(pkg)) return;
 
         int reason = prefs.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false)
                 ? PhoneLockedActivity.LOCK_REASON_REMOTE
@@ -202,55 +227,46 @@ public class AppBlockAccessibilityService extends AccessibilityService {
         long now = android.os.SystemClock.uptimeMillis();
 
         if (PhoneLockPolicy.isLauncherPackage(pkg)) {
-            requestLockScreen(reason, now);
+            // Home/launcher visible while gated → push lock screen immediately.
+            requestLockScreen(reason);
             return;
         }
 
         if (pkg.equals(lastPhoneLockPkg) && now - lastPhoneLockHomeAt < HOME_DEBOUNCE_MS) {
-            requestLockScreen(reason, now);
+            requestLockScreen(reason);
             return;
         }
         lastPhoneLockPkg = pkg;
         lastPhoneLockHomeAt = now;
-
         performGlobalAction(GLOBAL_ACTION_HOME);
-        requestLockScreen(reason, now);
+        requestLockScreen(reason);
     }
 
-    private void presentLockIfNeeded(int reason, boolean force) {
-        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
-            return;
-        }
-        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        if (!force && !PhoneLockPolicy.isPhoneGated(prefs)) {
-            return;
-        }
+    /**
+     * Forces the lock screen regardless of gate state or debounce.
+     * Used when the poll detects limit exceeded or a broadcast arrives.
+     */
+    private void forceLockScreen(int reason) {
+        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) return;
+        PhoneLockGate.showLockScreen(this, reason, true);
+    }
+
+    private void requestLockScreen(int reason) {
+        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) return;
         long now = android.os.SystemClock.uptimeMillis();
-        requestLockScreen(reason, now);
-    }
-
-    private void requestLockScreen(int reason, long now) {
-        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
-            return;
-        }
-        if (now - lastLockScreenRequestAt < LOCK_PRESENT_DEBOUNCE_MS) {
-            return;
-        }
+        if (now - lastLockScreenRequestAt < LOCK_PRESENT_DEBOUNCE_MS) return;
         lastLockScreenRequestAt = now;
         PhoneLockGate.showLockScreen(this, reason, true);
     }
 
     @Override
-    public void onInterrupt() {
-    }
+    public void onInterrupt() {}
 
     @Override
     public void onDestroy() {
         mainHandler.removeCallbacks(limitEnforcementPoll);
-        try {
-            unregisterReceiver(enforceLockReceiver);
-        } catch (IllegalArgumentException ignored) {
-        }
+        try { unregisterReceiver(enforceLockReceiver); } catch (IllegalArgumentException ignored) {}
+        try { unregisterReceiver(unlockReceiver); } catch (IllegalArgumentException ignored) {}
         limitExecutor.shutdown();
         super.onDestroy();
     }

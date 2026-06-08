@@ -15,6 +15,9 @@ final class PhoneLockGate {
     /** Fired when {@link BlockMonitorService} detects the phone should lock (accessibility shows UI). */
     static final String ACTION_ENFORCE_PHONE_LOCK =
             "com.example.detoxify.ENFORCE_PHONE_LOCK";
+    /** Fired when parent approves a request or lifts remote lock — tells lock screen to finish. */
+    static final String ACTION_UNLOCK_PHONE =
+            "com.example.detoxify.UNLOCK_PHONE";
 
     private static volatile boolean lockScreenResumed;
     private static volatile int interactionPauseDepth;
@@ -34,7 +37,7 @@ final class PhoneLockGate {
     }
 
     static void markLockScreenLaunching() {
-        lockScreenLaunchUntilMs = System.currentTimeMillis() + 6_000L;
+        lockScreenLaunchUntilMs = System.currentTimeMillis() + 1_500L;
     }
 
     static boolean isLockScreenLaunching() {
@@ -105,7 +108,9 @@ final class PhoneLockGate {
             return;
         }
         long now = System.currentTimeMillis();
-        if (!force && now - lastLaunchMs < LAUNCH_DEBOUNCE_MS) {
+        // Debounce ALL calls — forced or not — to prevent the onPause→launch→onPause loop.
+        // 800 ms is enough to survive a Home press + accessibility event arriving together.
+        if (now - lastLaunchMs < LAUNCH_DEBOUNCE_MS) {
             return;
         }
         lastLaunchMs = now;
@@ -113,10 +118,36 @@ final class PhoneLockGate {
 
         Intent i = new Intent(app, PhoneLockedActivity.class);
         i.putExtra(PhoneLockedActivity.EXTRA_LOCK_REASON, lockReason);
+        // SINGLE_TOP: if PhoneLockedActivity is already on top, route through onNewIntent
+        // instead of creating a new instance.  CLEAR_TASK was the flicker root-cause —
+        // it destroyed the running instance then immediately created a new one, which
+        // triggered onPause → requestLockPresentation → another CLEAR_TASK in a tight loop.
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_CLEAR_TOP
                 | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         app.startActivity(i);
+    }
+
+    /**
+     * Clears both gate flags atomically using commit() so every reader (accessibility,
+     * lock screen, BlockMonitorService) sees the cleared state immediately.
+     * Call this whenever a parent approves extra time or lifts remote lock.
+     */
+    static void clearAllLockFlags(Context context) {
+        context.getApplicationContext()
+                .getSharedPreferences("Detoxify", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false)
+                .putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false)
+                .commit();
+        // Also reset the launching window so the lock screen won't re-appear.
+        lockScreenLaunchUntilMs = 0L;
+        lastLaunchMs = 0L;
+    }
+
+    /** Broadcasts ACTION_UNLOCK_PHONE so PhoneLockedActivity can finish() itself instantly. */
+    static void broadcastUnlock(Context context) {
+        context.getApplicationContext().sendBroadcast(
+                new Intent(ACTION_UNLOCK_PHONE).setPackage(context.getPackageName()));
     }
 
     static void notifyTimeRequestDenied(Context context) {

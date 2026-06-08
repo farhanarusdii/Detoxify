@@ -17,26 +17,29 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PhoneLockedActivity extends AppCompatActivity {
 
-    public static final String EXTRA_LOCK_REASON = "lockReason";
+    public static final String EXTRA_LOCK_REASON      = "lockReason";
     public static final String EXTRA_SHOW_DENIED_DIALOG = "showDeniedDialog";
-    public static final int LOCK_REASON_DAILY_LIMIT = 1;
-    public static final int LOCK_REASON_REMOTE = 2;
+    public static final int    LOCK_REASON_DAILY_LIMIT = 1;
+    public static final int    LOCK_REASON_REMOTE      = 2;
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService executor    = Executors.newSingleThreadExecutor();
+    private final Handler         mainHandler = new Handler(Looper.getMainLooper());
+
+    // Periodic recheck while the lock screen is visible.
     private final Runnable recheckLimit = new Runnable() {
         @Override
         public void run() {
             if (!PhoneLockGate.isChildInteractionPaused()) {
                 tryDismissIfUnderLimit();
             }
-            mainHandler.postDelayed(this, 4000L);
+            mainHandler.postDelayed(this, 4_000L);
         }
     };
 
@@ -44,12 +47,31 @@ public class PhoneLockedActivity extends AppCompatActivity {
     private boolean deniedDialogVisible;
     private final AtomicBoolean recheckRunning = new AtomicBoolean(false);
 
+    // ── Broadcast receivers ────────────────────────────────────────────────────
+
+    /** Time-request was denied — show the denied dialog on top of the lock screen. */
     private final BroadcastReceiver deniedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             showDeniedDialog();
         }
     };
+
+    /**
+     * Parent approved / lifted remote lock → dismiss immediately.
+     * We drain interactionPauseDepth first so onPause() won't re-raise the lock.
+     */
+    private final BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            while (PhoneLockGate.isChildInteractionPaused()) {
+                PhoneLockGate.endChildInteraction();
+            }
+            finish();
+        }
+    };
+
+    // ── Static helpers ─────────────────────────────────────────────────────────
 
     public static void show(Context context) {
         show(context, LOCK_REASON_DAILY_LIMIT);
@@ -59,11 +81,13 @@ public class PhoneLockedActivity extends AppCompatActivity {
         PhoneLockGate.showLockScreen(context, lockReason);
     }
 
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Mark BEFORE super so accessibility sees it immediately
         PhoneLockGate.markLockScreenResumed(true);
         super.onCreate(savedInstanceState);
+
         lockReason = getIntent().getIntExtra(EXTRA_LOCK_REASON, LOCK_REASON_DAILY_LIMIT);
         if (lockReason != LOCK_REASON_REMOTE && lockReason != LOCK_REASON_DAILY_LIMIT) {
             lockReason = LOCK_REASON_DAILY_LIMIT;
@@ -74,20 +98,17 @@ public class PhoneLockedActivity extends AppCompatActivity {
             setTurnScreenOn(true);
         }
         setContentView(R.layout.activity_phone_locked);
-
         applyLockReasonUi();
 
+        // Back press: intentionally ignored — stay on lock screen.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
-            public void handleOnBackPressed() {
-                // Intentionally ignore back — stay on lock screen.
-            }
+            public void handleOnBackPressed() { /* locked */ }
         });
 
-        Button btnUnlock = findViewById(R.id.btn_parent_unlock);
-        btnUnlock.setOnClickListener(v -> showParentPasswordDialog());
-
+        Button btnUnlock  = findViewById(R.id.btn_parent_unlock);
         Button btnRequest = findViewById(R.id.btn_request_access);
+        btnUnlock.setOnClickListener(v -> showParentPasswordDialog());
         btnRequest.setOnClickListener(v ->
                 TimeRequestHelper.showRequestMoreTimeDialog(PhoneLockedActivity.this, false));
 
@@ -113,12 +134,18 @@ public class PhoneLockedActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        IntentFilter deniedFilter = new IntentFilter(PhoneLockGate.ACTION_TIME_REQUEST_DENIED);
+
+        IntentFilter deniedFilt = new IntentFilter(PhoneLockGate.ACTION_TIME_REQUEST_DENIED);
+        IntentFilter unlockFilt = new IntentFilter(PhoneLockGate.ACTION_UNLOCK_PHONE);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(deniedReceiver, deniedFilter, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(deniedReceiver, deniedFilt, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(unlockReceiver, unlockFilt, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(deniedReceiver, deniedFilter);
+            registerReceiver(deniedReceiver, deniedFilt);
+            registerReceiver(unlockReceiver, unlockFilt);
         }
+
         mainHandler.post(recheckLimit);
     }
 
@@ -131,14 +158,11 @@ public class PhoneLockedActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        // BUG 2 FIX: Mark NOT resumed immediately in onPause, not onStop.
-        // This means accessibility sees lockScreenResumed=false the moment we
-        // leave, so handlePhoneGatedWindow fires without waiting for onStop.
+        // Mark not-resumed immediately so accessibility fires the moment we leave.
         PhoneLockGate.markLockScreenResumed(false);
 
-        // Re-request the lock immediately so the lock screen comes back on top
-        // before any other app has a chance to draw. Skip if a child dialog is open
-        // (password entry, time request) — endChildInteraction will re-launch.
+        // Re-read fresh prefs — unlock broadcast may have just cleared gate flags.
+        // Only re-request if still locked AND no dialog is open.
         SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
         if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
             PhoneLockGate.requestLockPresentation(this, lockReason);
@@ -149,11 +173,8 @@ public class PhoneLockedActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         mainHandler.removeCallbacks(recheckLimit);
-        try {
-            unregisterReceiver(deniedReceiver);
-        } catch (IllegalArgumentException ignored) {
-        }
-        // markLockScreenResumed(false) already done in onPause — no need to repeat
+        try { unregisterReceiver(deniedReceiver); } catch (IllegalArgumentException ignored) {}
+        try { unregisterReceiver(unlockReceiver); } catch (IllegalArgumentException ignored) {}
         super.onStop();
     }
 
@@ -166,12 +187,21 @@ public class PhoneLockedActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        mainHandler.removeCallbacks(recheckLimit);
+        executor.shutdown();
+        PhoneLockGate.markLockScreenResumed(false);
+        super.onDestroy();
+    }
+
+    // ── UI helpers ─────────────────────────────────────────────────────────────
+
     private void applyLockReasonUi() {
-        TextView tvTitle = findViewById(R.id.tv_lock_title);
+        TextView tvTitle   = findViewById(R.id.tv_lock_title);
         TextView tvMessage = findViewById(R.id.tv_lock_message);
-        if (tvTitle == null || tvMessage == null) {
-            return;
-        }
+        if (tvTitle == null || tvMessage == null) return;
+
         if (lockReason == LOCK_REASON_REMOTE) {
             tvTitle.setText(R.string.phone_lock_remote_title);
             tvMessage.setText(R.string.phone_lock_remote_message);
@@ -181,10 +211,16 @@ public class PhoneLockedActivity extends AppCompatActivity {
         }
     }
 
+    // ── Dismiss logic ──────────────────────────────────────────────────────────
+
+    /**
+     * Checks whether the phone should still be locked.
+     * Fast-path: if both gate flags are already false (post-approval), finish immediately.
+     * Otherwise delegates to PhoneLimitEvaluator for the full usage check.
+     */
     private void tryDismissIfUnderLimit() {
-        if (!recheckRunning.compareAndSet(false, true)) {
-            return;
-        }
+        if (!recheckRunning.compareAndSet(false, true)) return;
+
         Context app = getApplicationContext();
         executor.execute(() -> {
             try {
@@ -194,15 +230,29 @@ public class PhoneLockedActivity extends AppCompatActivity {
                     runOnUiThread(this::finish);
                     return;
                 }
-                if (p.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false)) {
+
+                boolean remoteLock   = p.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false);
+                boolean limitExceeded = p.getBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false);
+
+                // Fast-path: parent approved — both flags already cleared.
+                if (!remoteLock && !limitExceeded) {
+                    runOnUiThread(this::finish);
+                    return;
+                }
+
+                // Still remote-locked — stay and show correct reason.
+                if (remoteLock) {
                     if (lockReason != LOCK_REASON_REMOTE) {
                         lockReason = LOCK_REASON_REMOTE;
                         runOnUiThread(this::applyLockReasonUi);
                     }
                     return;
                 }
+
+                // Daily-limit check.
                 PhoneLimitEvaluator.Result result = PhoneLimitEvaluator.evaluate(app, p);
                 p.edit().putLong("used_today", result.usedMinutes).apply();
+
                 if (!result.shouldLock) {
                     p.edit().putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false).apply();
                     runOnUiThread(this::finish);
@@ -219,12 +269,13 @@ public class PhoneLockedActivity extends AppCompatActivity {
         });
     }
 
+    // ── Dialogs ────────────────────────────────────────────────────────────────
+
     private void showDeniedDialog() {
-        if (deniedDialogVisible || isFinishing()) {
-            return;
-        }
+        if (deniedDialogVisible || isFinishing()) return;
         deniedDialogVisible = true;
         PhoneLockGate.beginChildInteraction();
+
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.time_request_denied_title)
                 .setMessage(R.string.time_request_denied_message)
@@ -241,24 +292,21 @@ public class PhoneLockedActivity extends AppCompatActivity {
     private void showParentPasswordDialog() {
         PhoneLockGate.beginChildInteraction();
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(R.string.phone_lock_parent_dialog_title);
-        builder.setMessage(R.string.phone_lock_parent_dialog_message);
-
         final EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
         input.setHint(R.string.phone_lock_parent_hint);
         input.setPadding(50, 20, 50, 20);
-        builder.setView(input);
 
-        builder.setPositiveButton(R.string.phone_lock_parent_unlock, (dialog, which) ->
-                verifyParentPassword(input.getText().toString().trim()));
-
-        builder.setNegativeButton(android.R.string.cancel, null);
-        builder.setCancelable(true);
-
-        AlertDialog dialog = builder.create();
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.phone_lock_parent_dialog_title)
+                .setMessage(R.string.phone_lock_parent_dialog_message)
+                .setView(input)
+                .setPositiveButton(R.string.phone_lock_parent_unlock, (d, w) ->
+                        verifyParentPassword(input.getText().toString().trim()))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setCancelable(true)
+                .create();
         dialog.setOnDismissListener(d -> PhoneLockGate.endChildInteraction());
         dialog.show();
 
@@ -266,34 +314,33 @@ public class PhoneLockedActivity extends AppCompatActivity {
         android.view.inputmethod.InputMethodManager imm =
                 (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (imm != null) {
-            input.postDelayed(() -> imm.showSoftInput(input,
-                    android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT), 200);
+            input.postDelayed(() ->
+                    imm.showSoftInput(input,
+                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT), 200);
         }
     }
 
-    private void verifyParentPassword(String enteredPassword) {
-        SharedPreferences sharedPreferences = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        String savedParentPassword = sharedPreferences.getString("parent_password", "");
-        if (savedParentPassword.isEmpty()) {
-            savedParentPassword = "123456";
-        }
-        if (!enteredPassword.equals(savedParentPassword)) {
+    private void verifyParentPassword(String entered) {
+        SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
+        String saved = prefs.getString("parent_password", "");
+        if (saved.isEmpty()) saved = "123456";
+
+        if (!entered.equals(saved)) {
             Toast.makeText(this, R.string.phone_lock_parent_failed, Toast.LENGTH_LONG).show();
             return;
         }
 
-        String childCode = sharedPreferences.getString("connectedChildCode", "");
-        String childName = sharedPreferences.getString("childName", getString(R.string.add_child_default_name));
-        long usedToday = sharedPreferences.getLong("used_today", 0L);
-        long currentLimit = sharedPreferences.getLong("phone_daily_limit",
-                sharedPreferences.getLong("daily_limit", 120));
-        long minLimit = Math.max(1L, usedToday + 1L);
+        String childCode  = prefs.getString("connectedChildCode", "");
+        String childName  = prefs.getString("childName", getString(R.string.add_child_default_name));
+        long   usedToday  = prefs.getLong("used_today", 0L);
+        long   currLimit  = prefs.getLong("phone_daily_limit",
+                prefs.getLong("daily_limit", 120));
+        long   minLimit   = Math.max(1L, usedToday + 1L);
 
-        CharSequence limitMessage = getString(R.string.phone_lock_set_limit_message,
-                childName, DurationFormat.hoursMinutes(usedToday));
-        DailyLimitDialogHelper.show(this, childCode, currentLimit, minLimit,
+        DailyLimitDialogHelper.show(this, childCode, currLimit, minLimit,
                 R.string.phone_lock_set_limit_title,
-                limitMessage,
+                getString(R.string.phone_lock_set_limit_message, childName,
+                        DurationFormat.hoursMinutes(usedToday)),
                 true,
                 new DailyLimitDialogHelper.Listener() {
                     @Override
@@ -305,16 +352,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onCancelled() {
-                    }
+                    public void onCancelled() {}
                 });
-    }
-
-    @Override
-    protected void onDestroy() {
-        mainHandler.removeCallbacks(recheckLimit);
-        executor.shutdown();
-        PhoneLockGate.markLockScreenResumed(false);
-        super.onDestroy();
     }
 }

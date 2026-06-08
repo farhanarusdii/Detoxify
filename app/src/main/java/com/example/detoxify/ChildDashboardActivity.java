@@ -48,6 +48,8 @@ public class ChildDashboardActivity extends AppCompatActivity {
     private DatabaseReference mDatabase;
     private long totalLimit = 120;
     private long usedToday;
+    /** Raw milliseconds — used for sub-minute-accurate remaining-time display. */
+    private long usedTodayMs;
     private String parentEmail = "";
 
     private final ExecutorService usageExecutor = Executors.newSingleThreadExecutor();
@@ -60,6 +62,35 @@ public class ChildDashboardActivity extends AppCompatActivity {
         public void run() {
             syncScreenTimeIfChildDevice();
             mainHandler.postDelayed(this, 5_000L);
+        }
+    };
+
+    /**
+     * Fires every second only when remaining time is under 5 minutes.
+     * Recomputes remaining from the last-known usedTodayMs so the display
+     * counts down smoothly without waiting for the next 5-second usage sync.
+     */
+    private final Runnable secondTickRunnable = new Runnable() {
+        @Override
+        public void run() {
+            long now = System.currentTimeMillis();
+            long limitMs = PhoneLimitEvaluator.effectiveLimitMinutes(sharedPreferences, now) * 60_000L;
+            long remainingMs = limitMs - usedTodayMs;
+            if (remainingMs < 0) remainingMs = 0;
+
+            if (tvTimeRemaining != null) {
+                tvTimeRemaining.setText(DurationFormat.fromMs(remainingMs));
+            }
+
+            if (remainingMs <= 0) {
+                // Limit hit — stop ticking and let the lock enforce itself
+                return;
+            }
+            if (remainingMs < 5 * 60_000L) {
+                // Keep ticking every second while under 5 minutes
+                mainHandler.postDelayed(this, 1_000L);
+            }
+            // Over 5 min → tick stopped; usageRefreshRunnable will restart it if needed
         }
     };
 
@@ -122,6 +153,7 @@ public class ChildDashboardActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         mainHandler.removeCallbacks(usageRefreshRunnable);
+        mainHandler.removeCallbacks(secondTickRunnable);
         super.onPause();
     }
 
@@ -138,6 +170,7 @@ public class ChildDashboardActivity extends AppCompatActivity {
     protected void onDestroy() {
         mainHandler.removeCallbacks(accessibilityPromptRunnable);
         mainHandler.removeCallbacks(usageRefreshRunnable);
+        mainHandler.removeCallbacks(secondTickRunnable);
         usageExecutor.shutdown();
         super.onDestroy();
     }
@@ -245,12 +278,14 @@ public class ChildDashboardActivity extends AppCompatActivity {
     }
 
     private void updateTimeRemaining(PhoneLimitEvaluator.Result result) {
-        long remaining = result.effectiveLimitMinutes - usedToday;
-        if (remaining < 0) {
-            remaining = 0;
-        }
+        long limitMs = result.effectiveLimitMinutes * 60_000L;
+        // Use raw ms for display when we have it (post-breakdown); fall back to whole minutes.
+        long remainingMs = (usedTodayMs > 0)
+                ? Math.max(0L, limitMs - usedTodayMs)
+                : Math.max(0L, (result.effectiveLimitMinutes - usedToday)) * 60_000L;
 
-        tvTimeRemaining.setText(DurationFormat.hoursMinutes(remaining));
+        // fromMs shows M:SS under 5 minutes so the display never freezes at "1m".
+        tvTimeRemaining.setText(DurationFormat.fromMs(remainingMs));
 
         String usedText = DurationFormat.hoursMinutes(usedToday);
         String limitText = DurationFormat.hoursMinutes(result.effectiveLimitMinutes);
@@ -267,9 +302,10 @@ public class ChildDashboardActivity extends AppCompatActivity {
                 ? (int) ((usedToday * 100) / result.effectiveLimitMinutes) : 0;
         progressTime.setProgress(Math.min(progress, 100));
 
-        if (remaining < 15) {
+        long remainingMinutes = remainingMs / 60_000L;
+        if (remainingMinutes < 15) {
             tvTimeRemaining.setTextColor(getResources().getColor(R.color.detox_rose, getTheme()));
-        } else if (remaining < 30) {
+        } else if (remainingMinutes < 30) {
             tvTimeRemaining.setTextColor(getResources().getColor(R.color.detox_peach, getTheme()));
         } else {
             tvTimeRemaining.setTextColor(getResources().getColor(R.color.detox_on_primary_container, getTheme()));
@@ -393,6 +429,7 @@ public class ChildDashboardActivity extends AppCompatActivity {
 
     private void applyBreakdown(UsageStatsHelper.TodayBreakdown breakdown) {
         usedToday = breakdown.totalMinutes;
+        usedTodayMs = breakdown.totalMs;
         sharedPreferences.edit().putLong("used_today", usedToday).apply();
         PhoneLimitEvaluator.Result result = PhoneLimitEvaluator.evaluate(this, sharedPreferences);
         totalLimit = result.effectiveLimitMinutes;
@@ -406,6 +443,15 @@ public class ChildDashboardActivity extends AppCompatActivity {
         updateTimeRemaining(result);
         populateTodayList(breakdown.apps);
         tvBedtimeStatus.setText(R.string.child_bedtime_card_hint);
+
+        // Start the per-second tick when under 5 minutes so the display counts down
+        // smoothly instead of being stuck on "1m" for up to 60 seconds.
+        long limitMs = result.effectiveLimitMinutes * 60_000L;
+        long remainingMs = limitMs - usedTodayMs;
+        mainHandler.removeCallbacks(secondTickRunnable);
+        if (remainingMs > 0 && remainingMs < 5 * 60_000L) {
+            mainHandler.postDelayed(secondTickRunnable, 1_000L);
+        }
     }
 
     private void populateTodayList(List<UsageStatsHelper.AppUsageRow> apps) {
