@@ -58,6 +58,14 @@ public class PhoneLockedActivity extends AppCompatActivity {
     };
 
     /**
+     * Set to true the moment an unlock broadcast arrives or any sanctioned dismiss path fires.
+     * Guards onPause() and onUserLeaveHint() from re-raising the lock screen while the activity
+     * is in the middle of finishing — without this, onPause fires before finish() completes and
+     * sees isPhoneGated()==true (flags not yet cleared in this process), causing an instant re-lock.
+     */
+    private volatile boolean unlockGranted = false;
+
+    /**
      * Parent approved / lifted remote lock → dismiss immediately.
      * We drain interactionPauseDepth first so onPause() won't re-raise the lock.
      */
@@ -67,6 +75,9 @@ public class PhoneLockedActivity extends AppCompatActivity {
             while (PhoneLockGate.isChildInteractionPaused()) {
                 PhoneLockGate.endChildInteraction();
             }
+            // Release OS pin so the child can navigate freely after approval.
+            try { stopLockTask(); } catch (Exception ignored) {}
+            unlockGranted = true;
             finish();
         }
     };
@@ -106,11 +117,24 @@ public class PhoneLockedActivity extends AppCompatActivity {
             public void handleOnBackPressed() { /* locked */ }
         });
 
-        Button btnUnlock  = findViewById(R.id.btn_parent_unlock);
-        Button btnRequest = findViewById(R.id.btn_request_access);
+        Button btnUnlock     = findViewById(R.id.btn_parent_unlock);
+        Button btnRequest    = findViewById(R.id.btn_request_access);
+        Button btnWhatCanIDo = findViewById(R.id.btn_what_can_i_do);
+
         btnUnlock.setOnClickListener(v -> showParentPasswordDialog());
         btnRequest.setOnClickListener(v ->
                 TimeRequestHelper.showRequestMoreTimeDialog(PhoneLockedActivity.this, false));
+
+        // Opens BedtimeIdeasActivity — the ONLY other screen allowed while locked.
+        // beginChildInteraction() tells the accessibility service not to fire Home
+        // during the transition. BedtimeIdeasActivity.onDestroy() calls endChildInteraction().
+        btnWhatCanIDo.setOnClickListener(v -> {
+            PhoneLockGate.beginChildInteraction();
+            Intent ideas = new Intent(PhoneLockedActivity.this, BedtimeIdeasActivity.class);
+            ideas.putExtra(BedtimeIdeasActivity.EXTRA_AUDIENCE,         BedtimeIdeasActivity.AUDIENCE_CHILD);
+            ideas.putExtra(BedtimeIdeasActivity.EXTRA_FROM_LOCK_SCREEN, true);
+            startActivity(ideas);
+        });
 
         if (getIntent().getBooleanExtra(EXTRA_SHOW_DENIED_DIALOG, false)) {
             mainHandler.postDelayed(this::showDeniedDialog, 400);
@@ -153,18 +177,26 @@ public class PhoneLockedActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         PhoneLockGate.markLockScreenResumed(true);
+        // Pin this activity at the OS level so Home, Recents, and the notification shade
+        // are disabled by the system. Requires android:lockTaskMode="always" in the manifest.
+        // Safe to call repeatedly — the system ignores it if already pinned.
+        try { startLockTask(); } catch (Exception ignored) {}
         tryDismissIfUnderLimit();
     }
 
     @Override
     protected void onPause() {
-        // Mark not-resumed immediately so accessibility fires the moment we leave.
         PhoneLockGate.markLockScreenResumed(false);
 
-        // Re-read fresh prefs — unlock broadcast may have just cleared gate flags.
-        // Only re-request if still locked AND no dialog is open.
+        // Only re-request lock if:
+        //   (a) phone is still gated (flags not cleared yet), AND
+        //   (b) unlock was NOT just granted (avoids race where onPause fires before
+        //       the cleared flags propagate from the service process), AND
+        //   (c) no dialog / BedtimeIdeasActivity is open on top of us.
         SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
+        if (!unlockGranted
+                && PhoneLockPolicy.isPhoneGated(prefs)
+                && !PhoneLockGate.isChildInteractionPaused()) {
             PhoneLockGate.requestLockPresentation(this, lockReason);
         }
         super.onPause();
@@ -182,7 +214,9 @@ public class PhoneLockedActivity extends AppCompatActivity {
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         SharedPreferences prefs = getSharedPreferences("Detoxify", MODE_PRIVATE);
-        if (PhoneLockPolicy.isPhoneGated(prefs) && !PhoneLockGate.isChildInteractionPaused()) {
+        if (!unlockGranted
+                && PhoneLockPolicy.isPhoneGated(prefs)
+                && !PhoneLockGate.isChildInteractionPaused()) {
             PhoneLockGate.requestLockPresentation(this, lockReason);
         }
     }
@@ -227,15 +261,17 @@ public class PhoneLockedActivity extends AppCompatActivity {
                 SharedPreferences p = app.getSharedPreferences("Detoxify", MODE_PRIVATE);
                 String childCode = p.getString("connectedChildCode", "");
                 if (childCode.isEmpty()) {
+                    unlockGranted = true;
                     runOnUiThread(this::finish);
                     return;
                 }
 
-                boolean remoteLock   = p.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false);
+                boolean remoteLock    = p.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false);
                 boolean limitExceeded = p.getBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false);
 
                 // Fast-path: parent approved — both flags already cleared.
                 if (!remoteLock && !limitExceeded) {
+                    unlockGranted = true;
                     runOnUiThread(this::finish);
                     return;
                 }
@@ -255,6 +291,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
 
                 if (!result.shouldLock) {
                     p.edit().putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false).apply();
+                    unlockGranted = true;
                     runOnUiThread(this::finish);
                 } else {
                     p.edit().putBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, true).apply();
@@ -347,6 +384,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
                     public void onSaved(long newLimitMinutes) {
                         Toast.makeText(PhoneLockedActivity.this,
                                 R.string.phone_lock_parent_success, Toast.LENGTH_LONG).show();
+                        unlockGranted = true;
                         finish();
                         PhoneLockRedirect.finishToHome(PhoneLockedActivity.this);
                     }

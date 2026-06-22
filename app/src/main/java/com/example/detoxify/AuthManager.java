@@ -86,6 +86,37 @@ public class AuthManager {
                 });
     }
 
+    /**
+     * Sends a Firebase password-reset email to the given address.
+     * Firebase validates whether the address belongs to an existing account and
+     * handles the reset link — no backend code required.
+     *
+     * The callback fires on the Firebase task thread; callers must switch to the
+     * main thread (runOnUiThread) before touching UI.
+     */
+    public void sendPasswordReset(String email, AuthResetCallback callback) {
+        if (email == null || email.trim().isEmpty()) {
+            callback.onError("Please enter your email address first.");
+            return;
+        }
+        mAuth.sendPasswordResetEmail(email.trim())
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onSuccess();
+                    } else {
+                        String msg = task.getException() != null
+                                ? task.getException().getMessage()
+                                : "Failed to send reset email.";
+                        callback.onError(msg);
+                    }
+                });
+    }
+
+    public interface AuthResetCallback {
+        void onSuccess();
+        void onError(String error);
+    }
+
     // Logout (parent account — clears Firebase session and all local state)
     public void logout() {
         ParentWatchController.stopWatching(context);

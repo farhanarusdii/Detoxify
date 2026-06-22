@@ -22,6 +22,7 @@ public class ModeSelectionActivity extends AppCompatActivity {
     private EditText etLoginEmail, etLoginPassword;
     private Button btnLogin;
     private TextView tvStatus;
+    private TextView tvForgotPassword;
 
     private EditText etSignupEmail, etSignupPassword, etSignupConfirm;
     private Button btnSignup;
@@ -80,6 +81,7 @@ public class ModeSelectionActivity extends AppCompatActivity {
         etLoginPassword = findViewById(R.id.et_login_password);
         btnLogin = findViewById(R.id.btn_login);
         tvStatus = findViewById(R.id.tv_status);
+        tvForgotPassword = findViewById(R.id.tv_forgot_password);
 
         etSignupEmail = findViewById(R.id.et_signup_email);
         etSignupPassword = findViewById(R.id.et_signup_password);
@@ -105,6 +107,8 @@ public class ModeSelectionActivity extends AppCompatActivity {
         btnDone.setOnClickListener(v -> handleParentDone());
 
         tvStatus.setOnClickListener(v -> showParentSignup());
+
+        tvForgotPassword.setOnClickListener(v -> handleForgotPassword());
     }
 
     private void showModeSelection() {
@@ -169,6 +173,46 @@ public class ModeSelectionActivity extends AppCompatActivity {
             @Override
             public void onError(String error) {
                 runOnUiThread(() -> tvStatus.setText("Login failed: " + error + "\nTap here to create account."));
+            }
+        });
+    }
+
+    private void handleForgotPassword() {
+        String email = etLoginEmail.getText().toString().trim();
+
+        // If the email field is empty, prompt the parent to fill it first.
+        if (email.isEmpty()) {
+            tvStatus.setTextColor(getColor(android.R.color.holo_orange_dark));
+            tvStatus.setText("Enter your email above, then tap \"Forgot password?\" again.");
+            return;
+        }
+
+        // Disable the link while the request is in-flight so the parent can't double-tap.
+        tvForgotPassword.setEnabled(false);
+        tvStatus.setTextColor(getResources().getColor(android.R.color.darker_gray, null));
+        tvStatus.setText("Sending reset email…");
+
+        authManager.sendPasswordReset(email, new AuthManager.AuthResetCallback() {
+            @Override
+            public void onSuccess() {
+                runOnUiThread(() -> {
+                    tvForgotPassword.setEnabled(true);
+                    // Switch tv_status to a success (non-error) colour so it's clearly positive.
+                    tvStatus.setTextColor(getResources().getColor(
+                            android.R.color.holo_green_dark, null));
+                    tvStatus.setText("Reset email sent to " + email
+                            + ". Check your inbox (and spam folder).");
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                runOnUiThread(() -> {
+                    tvForgotPassword.setEnabled(true);
+                    tvStatus.setTextColor(
+                            getResources().getColor(android.R.color.holo_red_dark, null));
+                    tvStatus.setText("Could not send reset email: " + error);
+                });
             }
         });
     }

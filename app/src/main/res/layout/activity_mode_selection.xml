@@ -234,6 +234,22 @@
                 android:layout_height="wrap_content"
                 android:text="Login" />
 
+            <!--
+                Forgot password link — tapping this calls AuthManager.sendPasswordReset()
+                with whatever email is currently in et_login_email, then shows confirmation
+                in tv_status.  No separate screen needed; Firebase handles the reset link.
+            -->
+            <TextView
+                android:id="@+id/tv_forgot_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:padding="8dp"
+                android:text="Forgot password?"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="13sp" />
+
             <TextView
                 android:id="@+id/tv_status"
                 android:layout_width="match_parent"

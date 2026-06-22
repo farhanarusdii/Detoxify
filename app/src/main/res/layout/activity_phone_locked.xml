@@ -68,6 +68,23 @@
                     android:layout_marginTop="@dimen/space_8"
                     android:text="@string/phone_lock_request_access" />
 
+                <!--
+                    Offline activities shortcut — opens BedtimeIdeasActivity in child mode.
+                    Launched with EXTRA_FROM_LOCK_SCREEN=true so BedtimeIdeasActivity skips
+                    the redirectIfGated() guard and stays open while the phone is locked.
+                    Uses a text button (lowest visual weight) so it reads as a tertiary action
+                    beneath the two primary/outlined buttons above it.
+                -->
+                <Button
+                    android:id="@+id/btn_what_can_i_do"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/phone_lock_what_can_i_do"
+                    android:drawableStart="@drawable/ic_lightbulb"
+                    android:drawablePadding="6dp" />
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

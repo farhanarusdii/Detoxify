@@ -83,15 +83,32 @@
             android:name=".ManageAccountActivity"
             android:exported="false" />
 
+        <!--
+            lockTaskMode="always"  — lets startLockTask() pin this activity at the OS level.
+            In lock-task mode the system disables Home, Recents, and the notification shade
+            so the child cannot leave by any hardware or gesture.
+
+            exported="true" + HOME intent-filter — required so that if the child somehow
+            triggers the Home intent while pinned, the OS routes it back here instead of
+            the real launcher (on some OEMs Home press in lock-task targets the default
+            home app unless the pinned app also declares HOME category).
+        -->
         <activity
             android:name=".PhoneLockedActivity"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTask"
             android:taskAffinity=""
             android:excludeFromRecents="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:theme="@style/Theme.Detoxify.LockScreen" />
+            android:lockTaskMode="always"
+            android:theme="@style/Theme.Detoxify.LockScreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".BlockMonitorService"

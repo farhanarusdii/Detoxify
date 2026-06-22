@@ -3,30 +3,44 @@ package com.example.detoxify;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/**
- * Packages that may stay on screen while the phone is gated for daily limit (best-effort).
- * Family Link routes emergency calls at the OS level; third-party apps can only approximate.
- */
 final class PhoneLockPolicy {
 
-    private PhoneLockPolicy() {
-    }
+    private PhoneLockPolicy() {}
 
     static boolean isPhoneGated(SharedPreferences prefs) {
         return prefs.getBoolean(BlockMonitorService.PREFS_REMOTE_FULL_LOCK, false)
                 || prefs.getBoolean(BlockMonitorService.PREFS_PHONE_LIMIT_EXCEEDED, false);
     }
 
+    /**
+     * Returns true for packages that are allowed to remain on screen while the phone is gated.
+     *
+     * Our own package (com.example.detoxify) is allowed ONLY in two states:
+     *   1. The lock screen itself is on top (isLockScreenResumed / isLockScreenLaunching).
+     *   2. BedtimeIdeasActivity is open — signalled by isChildInteractionPaused() == true,
+     *      which PhoneLockedActivity sets via PhoneLockGate.beginChildInteraction() before
+     *      launching BedtimeIdeasActivity, and BedtimeIdeasActivity.onDestroy() clears via
+     *      PhoneLockGate.endChildInteraction().
+     *
+     * Every other Detoxify screen (ChildDashboard, etc.) is NOT allowed while gated.
+     * External packages are allowed only for emergency calling.
+     */
     static boolean isPackageAllowedWhenPhoneLocked(Context context, String pkg) {
-        if (pkg == null || pkg.isEmpty()) {
+        if (pkg == null || pkg.isEmpty()) return false;
+
+        if (pkg.equals(context.getPackageName())) {
+            // Lock screen itself
+            if (PhoneLockGate.isLockScreenResumed() || PhoneLockGate.isLockScreenLaunching()) {
+                return true;
+            }
+            // BedtimeIdeasActivity — only sanctioned non-lock-screen screen while gated
+            if (PhoneLockGate.isChildInteractionPaused()) {
+                return true;
+            }
             return false;
         }
-        if (pkg.equals(context.getPackageName())) {
-            // Only the lock screen (and its dialogs) may show — not the child dashboard or other screens.
-            return PhoneLockGate.isLockScreenResumed()
-                    || PhoneLockGate.isLockScreenLaunching()
-                    || PhoneLockGate.isChildInteractionPaused();
-        }
+
+        // Emergency / calling packages — always allowed
         String p = pkg.toLowerCase(java.util.Locale.US);
         return p.equals("com.android.phone")
                 || p.contains("dialer")
@@ -36,11 +50,8 @@ final class PhoneLockPolicy {
                 || p.contains("teleservice");
     }
 
-    /** Soft keyboard / IME — must not trigger HOME while the child types on the lock screen. */
     static boolean isInputMethodPackage(String pkg) {
-        if (pkg == null || pkg.isEmpty()) {
-            return false;
-        }
+        if (pkg == null || pkg.isEmpty()) return false;
         String p = pkg.toLowerCase(java.util.Locale.US);
         return p.contains("inputmethod")
                 || p.contains("keyboard")
@@ -51,16 +62,8 @@ final class PhoneLockPolicy {
                 || p.contains("touchtype");
     }
 
-    /**
-     * Home/launcher and recents/task-switcher packages: when the child presses Home or
-     * opens recents while locked, show the lock screen instead of staying on the launcher.
-     * FIX 3: Added recents, taskview, overview to catch the task-switcher overlay,
-     * which lets children switch to another app without a WINDOW_STATE_CHANGED event.
-     */
     static boolean isLauncherPackage(String pkg) {
-        if (pkg == null || pkg.isEmpty()) {
-            return false;
-        }
+        if (pkg == null || pkg.isEmpty()) return false;
         String p = pkg.toLowerCase(java.util.Locale.US);
         return p.contains("launcher")
                 || p.equals("com.android.systemui")
@@ -74,8 +77,8 @@ final class PhoneLockPolicy {
                 || p.contains("sec.android.app.launcher")
                 || p.contains("oneplus.launcher")
                 || p.contains("nothing.launcher")
-                || p.contains("recents")       // recents / task-switcher overlay
-                || p.contains("taskview")      // some OEM task view implementations
-                || p.contains("overview");     // Pixel overview / recents
+                || p.contains("recents")
+                || p.contains("taskview")
+                || p.contains("overview");
     }
 }

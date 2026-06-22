@@ -7,7 +7,7 @@
     <string name="phone_lock_message">This phone has reached its daily screen-time limit. Phone use stays paused until tomorrow or until your parent approves more time or unlocks with their password.</string>
     <string name="phone_lock_parent_unlock">Parent unlock</string>
     <string name="phone_lock_footer">Emergency calling may still be available from your phone app.</string>
-
+    <string name="phone_lock_what_can_i_do">What can I do instead?</string>
     <string name="phone_lock_parent_dialog_title">Parent unlock</string>
     <string name="phone_lock_parent_dialog_message">Enter the parent password. You will be asked to set a new daily screen-time limit before the phone unlocks.</string>
     <string name="phone_lock_parent_hint">Parent password</string>

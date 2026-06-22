@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+        Material "lightbulb" icon (outline variant).
+        Path matches Material Symbols / MDI lightbulb-outline at 24 x 24 viewport.
+    -->
+    <path
+        android:fillColor="@color/detox_on_surface"
+        android:pathData="M12,2A7,7 0,0 0,5 9c0,2.76 1.6,5.15 3.93,6.34L9,17h6l0.07,-1.66C17.4,14.15 19,11.76 19,9A7,7 0,0 0,12 2zM9,21c0,0.55 0.45,1 1,1h4c0.55,0 1,-0.45 1,-1v-1H9v1zM11,15.93V18h2v-2.07A5,5 0,0 0,12 4a5,5 0,0 0,-1 9.93z" />
+</vector>
