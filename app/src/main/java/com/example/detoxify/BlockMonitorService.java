@@ -56,9 +56,12 @@ public class BlockMonitorService extends Service {
     /** Daily limit to restore after the grant ends ({@code timeGrant/baselineLimit}). */
     public static final String PREFS_TIME_GRANT_BASELINE = "time_grant_baseline";
 
-    private static final String CHANNEL_ID = "detoxify_policy";
+    private static final String CHANNEL_ID      = "detoxify_policy";
     private static final String CHANNEL_LOCK_ID = "detoxify_lock";
-    private static final int NOTIFICATION_ID = 7102;
+    /** Shown on the child's device at 75 % and 90 % of daily limit. */
+    private static final String CHANNEL_WARN_ID = "detoxify_usage_warning";
+    private static final int    NOTIFICATION_ID      = 7102;
+    private static final int    NOTIFICATION_WARN_ID = 7104;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService computeExecutor = Executors.newSingleThreadExecutor();
@@ -81,6 +84,15 @@ public class BlockMonitorService extends Service {
     private String lastBlockedPackage;
     /** Last {@code deviceLock/active} from Firebase — show lock UI only on false→true. */
     private Boolean lastRemoteLockActive;
+
+    /**
+     * Tracks which usage-warning thresholds have already been notified this calendar day
+     * so we don't spam the same warning repeatedly during the poll interval.
+     * Values: 75 and 90 (percent). Cleared when a new day starts.
+     */
+    private final java.util.Set<Integer> firedWarningsToday = new java.util.HashSet<>();
+    /** Calendar day (day-of-year) for which {@link #firedWarningsToday} was last cleared. */
+    private int lastWarningDay = -1;
 
     private final Runnable blockedPoll = new Runnable() {
         @Override
@@ -354,12 +366,22 @@ public class BlockMonitorService extends Service {
                     "Parent rules",
                     NotificationManager.IMPORTANCE_LOW);
             nm.createNotificationChannel(ch);
+
             NotificationChannel lockCh = new NotificationChannel(
                     CHANNEL_LOCK_ID,
                     "Screen time lock",
                     NotificationManager.IMPORTANCE_HIGH);
             lockCh.setDescription("Shows when daily screen time is up");
             nm.createNotificationChannel(lockCh);
+
+            // Warning channel — heads-up priority so the child sees it while using the phone.
+            NotificationChannel warnCh = new NotificationChannel(
+                    CHANNEL_WARN_ID,
+                    getString(R.string.notif_channel_warn_name),
+                    NotificationManager.IMPORTANCE_HIGH);
+            warnCh.setDescription(getString(R.string.notif_channel_warn_desc));
+            warnCh.enableVibration(true);
+            nm.createNotificationChannel(warnCh);
         }
 
         String channel = lockActive ? CHANNEL_LOCK_ID : CHANNEL_ID;
@@ -473,6 +495,8 @@ public class BlockMonitorService extends Service {
 
         prefs.edit().putBoolean(PREFS_PHONE_LIMIT_EXCEEDED, false).apply();
         mainHandler.post(() -> startForegroundWithNotification(false));
+        // Check 75 % / 90 % thresholds and fire warnings if crossed.
+        checkUsageWarnings(result.usedMinutes, result.effectiveLimitMinutes);
         return result.nextPollMs;
     }
 
@@ -504,6 +528,115 @@ public class BlockMonitorService extends Service {
         updates.put("dailyLimit", baseline);
         updates.put("timeGrant", null);
         firebaseDb.getReference().child("children").child(childCode).updateChildren(updates);
+    }
+
+    /**
+     * Sends a heads-up notification on the child's device when usage crosses 75 % or 90 %
+     * of the daily limit, and writes an alert to Firebase so the parent is notified too.
+     *
+     * Thresholds are fired at most once per calendar day — {@link #firedWarningsToday} is
+     * cleared at midnight automatically via the day-of-year check.
+     */
+    private void checkUsageWarnings(long usedMinutes, long limitMinutes) {
+        if (limitMinutes <= 0) return;
+
+        // Clear tracking when the calendar day rolls over.
+        int todayDoy = new java.util.GregorianCalendar().get(java.util.Calendar.DAY_OF_YEAR);
+        if (todayDoy != lastWarningDay) {
+            firedWarningsToday.clear();
+            lastWarningDay = todayDoy;
+        }
+
+        int pct = (int) ((usedMinutes * 100L) / limitMinutes);
+
+        // 90 % threshold — fire first so it doesn't get swallowed by the 75 % check.
+        if (pct >= 90 && !firedWarningsToday.contains(90)) {
+            firedWarningsToday.add(90);
+            long remainingMinutes = limitMinutes - usedMinutes;
+            postUsageWarningNotification(90, remainingMinutes, limitMinutes);
+            notifyParentOfExcessiveUsage(90, usedMinutes, limitMinutes);
+            return;
+        }
+
+        // 75 % threshold.
+        if (pct >= 75 && !firedWarningsToday.contains(75)) {
+            firedWarningsToday.add(75);
+            long remainingMinutes = limitMinutes - usedMinutes;
+            postUsageWarningNotification(75, remainingMinutes, limitMinutes);
+            notifyParentOfExcessiveUsage(75, usedMinutes, limitMinutes);
+        }
+    }
+
+    /**
+     * Posts a heads-up notification on the child's device showing how much screen time
+     * remains. Tapping it opens nothing — it is informational only.
+     */
+    private void postUsageWarningNotification(int pct, long remainingMinutes, long limitMinutes) {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        String title = getString(R.string.notif_usage_warning_title);
+        String body  = getString(
+                pct >= 90
+                        ? R.string.notif_usage_warning_body_90
+                        : R.string.notif_usage_warning_body_75,
+                remainingMinutes, limitMinutes);
+
+        int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
+                | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0);
+        // Tap → open child dashboard so the child can see remaining time.
+        PendingIntent tap = PendingIntent.getActivity(this, 7105,
+                new Intent(this, ChildDashboardActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                piFlags);
+
+        Notification notif = new NotificationCompat.Builder(this, CHANNEL_WARN_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setContentIntent(tap)
+                .setAutoCancel(true)
+                .build();
+
+        nm.notify(NOTIFICATION_WARN_ID, notif);
+    }
+
+    /**
+     * Writes an alert node to Firebase under {@code children/{code}/usageAlerts/{alertId}}
+     * so the parent's device (via {@link ParentTimeRequestService}) can pick it up and
+     * show a notification on the parent's phone too.
+     *
+     * Schema:
+     * <pre>
+     *   usageAlerts/{alertId}: {
+     *     percent: 75 | 90,
+     *     usedMinutes: long,
+     *     limitMinutes: long,
+     *     timestamp: long (epoch ms),
+     *     seen: false
+     *   }
+     * </pre>
+     */
+    private void notifyParentOfExcessiveUsage(int pct, long usedMinutes, long limitMinutes) {
+        String childCode = prefs.getString("connectedChildCode", "");
+        if (childCode.isEmpty()) return;
+
+        Map<String, Object> alert = new HashMap<>();
+        alert.put("percent",      pct);
+        alert.put("usedMinutes",  usedMinutes);
+        alert.put("limitMinutes", limitMinutes);
+        alert.put("timestamp",    System.currentTimeMillis());
+        alert.put("seen",         false);
+
+        firebaseDb.getReference()
+                .child("children")
+                .child(childCode)
+                .child("usageAlerts")
+                .push()
+                .setValue(alert);
     }
 
     private void goHome() {

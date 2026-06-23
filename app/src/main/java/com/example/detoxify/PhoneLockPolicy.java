@@ -15,39 +15,27 @@ final class PhoneLockPolicy {
     /**
      * Returns true for packages that are allowed to remain on screen while the phone is gated.
      *
-     * Our own package (com.example.detoxify) is allowed ONLY in two states:
-     *   1. The lock screen itself is on top (isLockScreenResumed / isLockScreenLaunching).
-     *   2. BedtimeIdeasActivity is open — signalled by isChildInteractionPaused() == true,
-     *      which PhoneLockedActivity sets via PhoneLockGate.beginChildInteraction() before
-     *      launching BedtimeIdeasActivity, and BedtimeIdeasActivity.onDestroy() clears via
-     *      PhoneLockGate.endChildInteraction().
+     * ONLY two screens are permitted:
+     *   1. PhoneLockedActivity itself.
+     *   2. BedtimeIdeasActivity — opened deliberately via btn_what_can_i_do.
+     *      Signalled by isChildInteractionPaused() == true for the duration it is open.
      *
-     * Every other Detoxify screen (ChildDashboard, etc.) is NOT allowed while gated.
-     * External packages are allowed only for emergency calling.
+     * Everything else — home launcher, third-party apps, other Detoxify screens — is blocked.
      */
     static boolean isPackageAllowedWhenPhoneLocked(Context context, String pkg) {
         if (pkg == null || pkg.isEmpty()) return false;
 
         if (pkg.equals(context.getPackageName())) {
-            // Lock screen itself
             if (PhoneLockGate.isLockScreenResumed() || PhoneLockGate.isLockScreenLaunching()) {
                 return true;
             }
-            // BedtimeIdeasActivity — only sanctioned non-lock-screen screen while gated
+            // BedtimeIdeasActivity is the only other permitted screen while gated.
             if (PhoneLockGate.isChildInteractionPaused()) {
                 return true;
             }
-            return false;
         }
 
-        // Emergency / calling packages — always allowed
-        String p = pkg.toLowerCase(java.util.Locale.US);
-        return p.equals("com.android.phone")
-                || p.contains("dialer")
-                || p.contains("incallui")
-                || p.contains("emergency")
-                || p.contains("telecom")
-                || p.contains("teleservice");
+        return false;
     }
 
     static boolean isInputMethodPackage(String pkg) {
