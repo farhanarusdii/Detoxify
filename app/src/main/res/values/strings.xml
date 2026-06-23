@@ -6,7 +6,7 @@
     <string name="phone_lock_title">Time\'s up for today</string>
     <string name="phone_lock_message">This phone has reached its daily screen-time limit. Phone use stays paused until tomorrow or until your parent approves more time or unlocks with their password.</string>
     <string name="phone_lock_parent_unlock">Parent unlock</string>
-    <string name="phone_lock_footer">Emergency calling may still be available from your phone app.</string>
+    <string name="phone_lock_footer">Ask your parent to unlock the phone for you.</string>
     <string name="phone_lock_what_can_i_do">What can I do instead?</string>
     <string name="phone_lock_parent_dialog_title">Parent unlock</string>
     <string name="phone_lock_parent_dialog_message">Enter the parent password. You will be asked to set a new daily screen-time limit before the phone unlocks.</string>
@@ -78,7 +78,7 @@
     <string name="notif_action_approve">Review &amp; approve</string>
 
     <string name="parent_card_device_lock_title">Lock whole phone</string>
-    <string name="parent_device_locked_status">Status: locked — child can only use emergency/dialer and Detoxify</string>
+    <string name="parent_device_locked_status">Status: locked — child can only see the lock screen and offline activities</string>
     <string name="parent_device_unlocked_status">Status: unlocked — normal daily limit applies</string>
     <string name="parent_device_lock_dialog_title">Lock this child’s phone?</string>
     <string name="parent_device_lock_dialog_message">The child device will be blocked from all apps (like Google Family Link pause). They can send you a time request from the lock screen.</string>
@@ -288,4 +288,21 @@
 
     <string name="time_request_denied_title">Request not approved</string>
     <string name="time_request_denied_message">Your parent did not approve more screen time right now. You can try again later or ask them in person.</string>
+    <!-- ── Usage warning notifications (child device) ── -->
+    <string name="notif_channel_warn_name">Screen time warnings</string>
+    <string name="notif_channel_warn_desc">Alerts you when you are getting close to your daily screen time limit</string>
+    <string name="notif_usage_warning_title">Screen time warning</string>
+    <!-- %1$d = minutes remaining, %2$d = daily limit in minutes -->
+    <string name="notif_usage_warning_body_75">You have used 75%% of your daily limit. Only %1$d of %2$d minutes remaining.</string>
+    <string name="notif_usage_warning_body_90">Almost out of screen time! Only %1$d of %2$d minutes remaining today.</string>
+
+    <!-- ── Excessive usage alerts (parent device) ── -->
+    <string name="notif_channel_parent_usage_name">Child usage alerts</string>
+    <string name="notif_channel_parent_usage_desc">Notifies you when your child is approaching their daily screen time limit</string>
+    <!-- %1$s = child name -->
+    <string name="notif_parent_usage_title">%1$s\'s screen time</string>
+    <!-- %1$s = child name, %2$d = used minutes, %3$d = limit minutes -->
+    <string name="notif_parent_usage_body_75">%1$s has used 75%% of their daily limit (%2$d of %3$d minutes).</string>
+    <string name="notif_parent_usage_body_90">%1$s has used 90%% of their daily limit (%2$d of %3$d minutes). Their phone will lock soon.</string>
+
 </resources>

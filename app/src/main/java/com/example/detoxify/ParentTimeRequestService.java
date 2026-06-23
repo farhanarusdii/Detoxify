@@ -33,11 +33,14 @@ public class ParentTimeRequestService extends Service {
 
     private static final String TAG = "ParentTimeRequestSvc";
 
-    static final String CHANNEL_WATCH = "detoxify_parent_watch";
+    static final String CHANNEL_WATCH  = "detoxify_parent_watch";
     static final String CHANNEL_ALERTS = "detoxify_time_request_alerts";
+    /** Separate channel for excessive-usage alerts so parents can control them independently. */
+    static final String CHANNEL_USAGE_ALERTS = "detoxify_parent_usage_alerts";
 
-    private static final int NOTIF_ID_FOREGROUND = 7101;
-    private static final int NOTIF_ID_ALERT_BASE = 7200;
+    private static final int NOTIF_ID_FOREGROUND  = 7101;
+    private static final int NOTIF_ID_ALERT_BASE  = 7200;
+    private static final int NOTIF_ID_USAGE_BASE  = 7300;
 
     private final FirebaseDatabase db = FirebaseDatabase.getInstance();
     private DatabaseReference root;
@@ -48,6 +51,14 @@ public class ParentTimeRequestService extends Service {
     private Query childrenQuery;
 
     private final Map<String, ValueEventListener> timeRequestListeners = new HashMap<>();
+    /** Firebase listeners watching {@code children/{code}/usageAlerts} per child. */
+    private final Map<String, ValueEventListener> usageAlertListeners  = new HashMap<>();
+    /**
+     * Child name cache populated from the {@code children} query snapshot.
+     * Keyed by child code so usage-alert and time-request notifications always show
+     * the correct child name without an extra Firebase read.
+     */
+    private final Map<String, String> childNames = new HashMap<>();
 
     @Override
     public void onCreate() {
@@ -96,6 +107,14 @@ public class ParentTimeRequestService extends Service {
                 NotificationManager.IMPORTANCE_HIGH);
         alerts.setDescription(getString(R.string.notif_channel_alerts_desc));
         nm.createNotificationChannel(alerts);
+
+        NotificationChannel usageAlerts = new NotificationChannel(
+                CHANNEL_USAGE_ALERTS,
+                getString(R.string.notif_channel_parent_usage_name),
+                NotificationManager.IMPORTANCE_HIGH);
+        usageAlerts.setDescription(getString(R.string.notif_channel_parent_usage_desc));
+        usageAlerts.enableVibration(true);
+        nm.createNotificationChannel(usageAlerts);
     }
 
     private Notification buildForegroundNotification() {
@@ -141,6 +160,11 @@ public class ParentTimeRequestService extends Service {
             String code = c.getKey();
             if (code != null) {
                 wanted.add(code);
+                // Cache the child's display name so notifications always use the right name.
+                String name = c.child("childName").getValue(String.class);
+                if (name != null && !name.isEmpty()) {
+                    childNames.put(code, name);
+                }
             }
         }
 
@@ -171,6 +195,26 @@ public class ParentTimeRequestService extends Service {
             };
             ref.addValueEventListener(listener);
             timeRequestListeners.put(code, listener);
+
+            // ── Usage-alert listener ───────────────────────────────────────────
+            // Watches children/{code}/usageAlerts and notifies the parent when a
+            // 75 % or 90 % threshold alert arrives from the child's device.
+            if (!usageAlertListeners.containsKey(code)) {
+                DatabaseReference alertRef = root.child("children").child(code).child("usageAlerts");
+                ValueEventListener alertListener = new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        handleUsageAlertsSnapshot(code, snapshot);
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        Log.w(TAG, "usageAlerts " + code + ": " + error.getMessage());
+                    }
+                };
+                alertRef.addValueEventListener(alertListener);
+                usageAlertListeners.put(code, alertListener);
+            }
         }
     }
 
@@ -195,7 +239,10 @@ public class ParentTimeRequestService extends Service {
 
         Long minsObj = snap.child("requestedMinutes").getValue(Long.class);
         long mins = minsObj != null ? minsObj : 0L;
-        String childName = snap.child("childName").getValue(String.class);
+        // Prefer the cache; fall back to whatever the child wrote into the request node.
+        String childName = childNames.containsKey(childCode)
+                ? childNames.get(childCode)
+                : snap.child("childName").getValue(String.class);
         if (childName == null || childName.isEmpty()) {
             childName = getString(R.string.notif_child_default_name);
         }
@@ -206,7 +253,7 @@ public class ParentTimeRequestService extends Service {
     }
 
     private void showTimeRequestNotification(String childCode, String childName, long requestedMinutes,
-                                           String requestId) {
+                                             String requestId) {
         Intent open = new Intent(this, ApproveTimeRequestActivity.class);
         open.putExtra(ApproveTimeRequestActivity.EXTRA_CHILD_CODE, childCode);
         open.putExtra(ApproveTimeRequestActivity.EXTRA_REQUEST_ID, requestId);
@@ -241,6 +288,71 @@ public class ParentTimeRequestService extends Service {
         nm.notify(id, n);
     }
 
+    /**
+     * Called whenever the {@code children/{code}/usageAlerts} node changes.
+     * Iterates unseen alerts and shows a notification to the parent for each one.
+     * Marks each alert as seen by writing {@code seen=true} back to Firebase so
+     * reconnects don't re-fire the same alert.
+     */
+    private void handleUsageAlertsSnapshot(String childCode, DataSnapshot snapshot) {
+        if (snapshot == null || !snapshot.exists()) return;
+
+        // Look up name from the cache populated by syncPerChildListeners.
+        // Falls back to "Your child" only if the parent's children snapshot hasn't arrived yet.
+        String childName = childNames.containsKey(childCode)
+                ? childNames.get(childCode)
+                : getString(R.string.notif_child_default_name);
+
+        for (DataSnapshot alert : snapshot.getChildren()) {
+            Boolean seen = alert.child("seen").getValue(Boolean.class);
+            if (Boolean.TRUE.equals(seen)) continue;
+
+            Long pctObj   = alert.child("percent").getValue(Long.class);
+            Long usedObj  = alert.child("usedMinutes").getValue(Long.class);
+            Long limitObj = alert.child("limitMinutes").getValue(Long.class);
+            if (pctObj == null || usedObj == null || limitObj == null) continue;
+
+            int  pct   = pctObj.intValue();
+            long used  = usedObj;
+            long limit = limitObj;
+
+            showUsageAlertNotification(childCode, childName, pct, used, limit);
+
+            // Mark seen so re-attach doesn't re-notify.
+            alert.getRef().child("seen").setValue(true);
+        }
+    }
+
+    private void showUsageAlertNotification(String childCode, String childName,
+                                            int pct, long usedMinutes, long limitMinutes) {
+        String title = getString(R.string.notif_parent_usage_title, childName);
+        String body  = getString(
+                pct >= 90
+                        ? R.string.notif_parent_usage_body_90
+                        : R.string.notif_parent_usage_body_75,
+                childName, usedMinutes, limitMinutes);
+
+        Intent open = new Intent(this, ParentDashboardActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pi = pendingActivity(open, (childCode.hashCode() ^ pct) & 0xffff);
+
+        Notification n = new NotificationCompat.Builder(this, CHANNEL_USAGE_ALERTS)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_SOUND | NotificationCompat.DEFAULT_VIBRATE)
+                .build();
+
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        int id = NOTIF_ID_USAGE_BASE + (Math.abs(childCode.hashCode()) % 50) + (pct >= 90 ? 1 : 0);
+        nm.notify(id, n);
+    }
+
     private PendingIntent pendingActivity(Intent intent, int requestCode) {
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -260,5 +372,11 @@ public class ParentTimeRequestService extends Service {
             root.child("children").child(e.getKey()).child("timeRequest").removeEventListener(e.getValue());
         }
         timeRequestListeners.clear();
+
+        for (Map.Entry<String, ValueEventListener> e : usageAlertListeners.entrySet()) {
+            root.child("children").child(e.getKey()).child("usageAlerts").removeEventListener(e.getValue());
+        }
+        usageAlertListeners.clear();
+        childNames.clear();
     }
 }
