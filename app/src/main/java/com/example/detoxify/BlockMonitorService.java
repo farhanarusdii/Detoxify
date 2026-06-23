@@ -312,7 +312,7 @@ public class BlockMonitorService extends Service {
         if (!prefs.getBoolean(PREFS_REMOTE_FULL_LOCK, false)) {
             return;
         }
-        if (PhoneLockGate.shouldDeferPhoneLockEnforcement()) {
+        if (PhoneLockGate.shouldDeferAccessibilityHomeAction()) {
             return;
         }
         PhoneLockGate.requestLockPresentation(this, PhoneLockedActivity.LOCK_REASON_REMOTE);

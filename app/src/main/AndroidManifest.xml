@@ -64,7 +64,8 @@
 
         <activity
             android:name=".BedtimeIdeasActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:showWhenLocked="true" />
 
         <activity
             android:name=".ApproveTimeRequestActivity"
@@ -101,7 +102,7 @@
             android:excludeFromRecents="true"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:lockTaskMode="always"
+            android:lockTaskMode="if_whitelisted"
             android:theme="@style/Theme.Detoxify.LockScreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

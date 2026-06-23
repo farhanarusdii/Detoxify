@@ -75,8 +75,6 @@ public class PhoneLockedActivity extends AppCompatActivity {
             while (PhoneLockGate.isChildInteractionPaused()) {
                 PhoneLockGate.endChildInteraction();
             }
-            // Release OS pin so the child can navigate freely after approval.
-            try { stopLockTask(); } catch (Exception ignored) {}
             unlockGranted = true;
             finish();
         }
@@ -177,10 +175,6 @@ public class PhoneLockedActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         PhoneLockGate.markLockScreenResumed(true);
-        // Pin this activity at the OS level so Home, Recents, and the notification shade
-        // are disabled by the system. Requires android:lockTaskMode="always" in the manifest.
-        // Safe to call repeatedly — the system ignores it if already pinned.
-        try { startLockTask(); } catch (Exception ignored) {}
         tryDismissIfUnderLimit();
     }
 
