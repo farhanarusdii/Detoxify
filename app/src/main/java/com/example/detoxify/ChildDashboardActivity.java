@@ -510,8 +510,11 @@ public class ChildDashboardActivity extends AppCompatActivity {
         btnSwitchToParent.setOnClickListener(v -> showParentPasswordDialog());
         cardMood.setOnClickListener(v -> MoodCheckInHelper.showCheckInDialog(this));
         cardBedtime.setOnClickListener(v -> {
+            PhoneLockGate.beginChildInteraction();
             Intent i = new Intent(this, BedtimeIdeasActivity.class);
             i.putExtra(BedtimeIdeasActivity.EXTRA_AUDIENCE, BedtimeIdeasActivity.AUDIENCE_CHILD);
+            i.putExtra(BedtimeIdeasActivity.EXTRA_FROM_LOCK_SCREEN,
+                    PhoneLockPolicy.isPhoneGated(getSharedPreferences("Detoxify", MODE_PRIVATE)));
             startActivity(i);
         });
     }

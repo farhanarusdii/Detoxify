@@ -212,6 +212,12 @@ public class AppBlockAccessibilityService extends AccessibilityService {
     }
 
     private void forceLockScreen(int reason) {
+        // Do NOT force the lock screen while BedtimeIdeasActivity (or a dialog) is
+        // deliberately open on top of the lock screen.  The poll and enforceLockReceiver
+        // both call this every ~1 s; without this guard they close BedtimeIdeas immediately
+        // after it opens.  kickToLockScreen() already has this guard for window events;
+        // we mirror it here for the broadcast / poll path.
+        if (PhoneLockGate.isChildInteractionPaused()) return;
         PhoneLockGate.showLockScreen(this, reason, true);
     }
 

@@ -104,7 +104,7 @@ public class PhoneLockedActivity extends AppCompatActivity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
-            setTurnScreenOn(true);
+            setTurnScreenOn(false);
         }
         setContentView(R.layout.activity_phone_locked);
         applyLockReasonUi();
